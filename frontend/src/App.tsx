@@ -67,7 +67,7 @@ function App() {
         )}
 
         {!loading && !error && people.length > 0 && (
-          <div className="grid grid-cols-1 justify-center gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-wrap justify-center gap-5">
             {people.map((person) => (
               <PersonCard
                 key={person.name}

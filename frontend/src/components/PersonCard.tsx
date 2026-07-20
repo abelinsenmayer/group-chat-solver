@@ -22,7 +22,7 @@ export default function PersonCard({ person, selected, onToggle }: PersonCardPro
       aria-pressed={selected}
       onClick={onToggle}
       className={cn(
-        'rounded-3xl border-2 border-primary bg-background px-5 pb-3 text-center text-text transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary',
+        'w-70 rounded-3xl border-2 border-primary bg-background px-5 pb-3 text-center text-text transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary',
         selected && 'outline-4 outline-secondary outline-offset-2',
       )}
     >
