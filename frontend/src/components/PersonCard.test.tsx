@@ -23,5 +23,5 @@ test('announces selection state and toggles when clicked', async () => {
 
   rerender(<PersonCard person={person} selected onToggle={onToggle} />)
   expect(card).toHaveAttribute('aria-pressed', 'true')
-  expect(card).toHaveClass('outline-page-primary')
+  expect(card).toHaveClass('outline-primary')
 })
