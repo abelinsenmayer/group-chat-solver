@@ -8,6 +8,64 @@ By operationalizing everyone's needs and representing their preferences through 
 
 The first version of this tool is a web application that plans a meal for a group of people.
 
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18 or later with [Corepack](https://nodejs.org/api/corepack.html) enabled for Yarn Berry
+- Python 3.10 or later
+- [uv](https://docs.astral.sh/uv/)
+
+### Install dependencies
+
+Install frontend dependencies:
+
+```bash
+cd frontend
+corepack yarn install
+```
+
+Install backend dependencies:
+
+```bash
+cd backend
+uv sync
+```
+
+### Run locally
+
+Start the backend in one terminal:
+
+```bash
+cd backend
+uv run uvicorn src.api:app --reload
+```
+
+Start the frontend in another terminal:
+
+```bash
+cd frontend
+corepack yarn dev
+```
+
+Open the frontend at `http://localhost:5173`. The backend API runs at `http://127.0.0.1:8000`.
+
+### Run tests
+
+Run frontend tests:
+
+```bash
+cd frontend
+corepack yarn test
+```
+
+Run backend tests:
+
+```bash
+cd backend
+uv run pytest
+```
+
 # Implementation Plan
 
 ## Inputs

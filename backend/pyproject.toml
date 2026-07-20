@@ -8,6 +8,8 @@ dependencies = [
     "ollama>=0.4",
     "requests>=2.32",
     "scipy>=1.15.3",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
 ]
 
 [dependency-groups]
