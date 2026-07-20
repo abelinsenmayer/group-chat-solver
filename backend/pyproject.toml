@@ -3,7 +3,18 @@ name = "group-chat-solver-backend"
 version = "0.1.0"
 description = "Backend for group chat solver"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "geopandas>=1.1.4",
+    "ollama>=0.4",
+    "requests>=2.32",
+    "scipy>=1.15.3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "responses>=0.25",
+]
 
 [build-system]
 requires = ["hatchling"]
