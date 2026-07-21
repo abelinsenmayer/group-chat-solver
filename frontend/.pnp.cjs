@@ -33,6 +33,7 @@ const RAW_RUNTIME_STATE =
           ["@testing-library/jest-dom", "npm:6.9.1"],\
           ["@testing-library/react", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:16.3.2"],\
           ["@testing-library/user-event", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:14.6.1"],\
+          ["@types/mapbox-gl", "npm:3.5.0"],\
           ["@types/react", "npm:18.3.31"],\
           ["@types/react-dom", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:18.3.7"],\
           ["@vitejs/plugin-react", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:4.7.0"],\
@@ -41,6 +42,7 @@ const RAW_RUNTIME_STATE =
           ["group-chat-solver-frontend", "workspace:."],\
           ["jsdom", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:29.1.1"],\
           ["lucide-react", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:1.25.0"],\
+          ["mapbox-gl", "npm:3.26.0"],\
           ["react", "npm:18.3.1"],\
           ["react-dom", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:18.3.1"],\
           ["tailwind-merge", "npm:3.6.0"],\
@@ -1474,6 +1476,16 @@ const RAW_RUNTIME_STATE =
         "linkType": "HARD"\
       }]\
     ]],\
+    ["@types/mapbox-gl", [\
+      ["npm:3.5.0", {\
+        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/@types-mapbox-gl-npm-3.5.0-b47e50fee2-10c0.zip/node_modules/@types/mapbox-gl/",\
+        "packageDependencies": [\
+          ["@types/mapbox-gl", "npm:3.5.0"],\
+          ["mapbox-gl", "npm:3.26.0"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
     ["@types/prop-types", [\
       ["npm:15.7.15", {\
         "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/@types-prop-types-npm-15.7.15-cefe16a1fa-10c0.zip/node_modules/@types/prop-types/",\
@@ -2059,6 +2071,7 @@ const RAW_RUNTIME_STATE =
           ["@testing-library/jest-dom", "npm:6.9.1"],\
           ["@testing-library/react", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:16.3.2"],\
           ["@testing-library/user-event", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:14.6.1"],\
+          ["@types/mapbox-gl", "npm:3.5.0"],\
           ["@types/react", "npm:18.3.31"],\
           ["@types/react-dom", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:18.3.7"],\
           ["@vitejs/plugin-react", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:4.7.0"],\
@@ -2067,6 +2080,7 @@ const RAW_RUNTIME_STATE =
           ["group-chat-solver-frontend", "workspace:."],\
           ["jsdom", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:29.1.1"],\
           ["lucide-react", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:1.25.0"],\
+          ["mapbox-gl", "npm:3.26.0"],\
           ["react", "npm:18.3.1"],\
           ["react-dom", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:18.3.1"],\
           ["tailwind-merge", "npm:3.6.0"],\
@@ -2378,6 +2392,15 @@ const RAW_RUNTIME_STATE =
         "packageDependencies": [\
           ["@jridgewell/sourcemap-codec", "npm:1.5.5"],\
           ["magic-string", "npm:0.30.21"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["mapbox-gl", [\
+      ["npm:3.26.0", {\
+        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/mapbox-gl-npm-3.26.0-ea8f3e64ec-10c0.zip/node_modules/mapbox-gl/",\
+        "packageDependencies": [\
+          ["mapbox-gl", "npm:3.26.0"]\
         ],\
         "linkType": "HARD"\
       }]\

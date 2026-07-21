@@ -1,10 +1,38 @@
 from datetime import time
-from unittest.mock import Mock
-
-import pytest
+from unittest.mock import patch
 
 from src.person import Person
-from src.solver import solve_group_chat
+from src.solver import solve_reachable_areas
 
 
+AREA = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
 
+
+def test_solver_returns_each_area_and_overlap_for_common_availability():
+    people = [
+        Person("A", (time(17), time(20)), (40.0, -73.0), ""),
+        Person("B", (time(17), time(20)), (40.1, -73.1), ""),
+    ]
+    with patch("src.solver.find_ideal_start_time", return_value=time(18)), patch(
+        "src.solver.find_reachable_area", return_value=AREA
+    ) as find_area, patch("src.solver.intersect_polygons", return_value=AREA):
+        result = solve_reachable_areas(people)
+
+    assert result["status"] == "ok"
+    assert result["optimal_start_time"] == "18:00"
+    assert [entry["travel_time_minutes"] for entry in result["people"]] == [60, 60]
+    assert result["overlap"] == AREA
+    assert find_area.call_args_list[0].args[0] == (-73.0, 40.0)
+
+
+def test_solver_keeps_individual_areas_when_no_common_availability():
+    people = [
+        Person("A", (time(9), time(10)), (40.0, -73.0), ""),
+        Person("B", (time(18), time(19)), (40.1, -73.1), ""),
+    ]
+    with patch("src.solver.find_reachable_area", return_value=AREA):
+        result = solve_reachable_areas(people)
+
+    assert result["status"] == "no_common_availability"
+    assert result["overlap"] is None
+    assert len(result["people"]) == 2

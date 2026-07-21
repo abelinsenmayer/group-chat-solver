@@ -32,6 +32,10 @@ cd backend
 uv sync
 ```
 
+### Mapbox configuration
+
+Set `MAPBOX_ACCESS_TOKEN` in the backend environment so the server can request isochrones. Set `VITE_MAPBOX_ACCESS_TOKEN` in `frontend/.env.local` with a public Mapbox token so Mapbox GL JS can render the map. Do not commit either token.
+
 ### Run locally
 
 Start the backend in one terminal:

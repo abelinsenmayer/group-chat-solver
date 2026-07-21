@@ -11,6 +11,29 @@ export type Person = {
   preferences: string
 }
 
+export type GeoJsonGeometry =
+  | {
+    type: 'Polygon'
+    coordinates: number[][][]
+  }
+  | {
+    type: 'MultiPolygon'
+    coordinates: number[][][][]
+  }
+
+export type ReachableAreaResult = {
+  person: Person
+  travel_time_minutes: number
+  area: GeoJsonGeometry
+}
+
+export type ReachableAreaResponse = {
+  status: 'ok' | 'no_common_availability' | 'no_common_reachable_area'
+  optimal_start_time: string | null
+  people: ReachableAreaResult[]
+  overlap: GeoJsonGeometry | null
+}
+
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
 
 export async function fetchPeople(): Promise<Person[]> {
@@ -21,4 +44,18 @@ export async function fetchPeople(): Promise<Person[]> {
   }
 
   return response.json() as Promise<Person[]>
+}
+
+export async function fetchReachableAreas(people: Person[]): Promise<ReachableAreaResponse> {
+  const response = await fetch(`${apiBaseUrl}/api/reachable-areas`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ people }),
+  })
+
+  if (!response.ok) {
+    throw new Error('Unable to load reachable areas.')
+  }
+
+  return response.json() as Promise<ReachableAreaResponse>
 }

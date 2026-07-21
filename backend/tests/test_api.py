@@ -1,6 +1,10 @@
+from datetime import time
+from unittest.mock import patch
+
 from fastapi.testclient import TestClient
 
 from src.api import app
+from src.person import Person
 
 
 def test_people_endpoint_returns_serialized_sample_people():
@@ -39,3 +43,40 @@ def test_people_endpoint_returns_serialized_sample_people():
             "preferences": "Pizza or casual Italian, rated above 4.5 stars",
         },
     ]
+
+
+def test_reachable_areas_endpoint_returns_solver_result():
+    payload = {
+        "people": [
+            {
+                "name": "Elena",
+                "availability": {"start": "17:30", "end": "20:00"},
+                "location": {"latitude": 40.7589, "longitude": -73.9851},
+                "preferences": "",
+            }
+        ]
+    }
+
+    with patch("src.api.solve_reachable_areas", return_value={
+        "status": "ok",
+        "optimal_start_time": "18:00",
+        "people": [{
+            "person": Person("Elena", (time(17, 30), time(20)), (40.7589, -73.9851), ""),
+            "travel_time_minutes": 30,
+            "area": {"type": "Polygon", "coordinates": []},
+        }],
+        "overlap": None,
+    }):
+        response = TestClient(app).post("/api/reachable-areas", json=payload)
+
+    assert response.status_code == 200
+    assert response.json()["people"][0]["person"]["location"] == {
+        "latitude": 40.7589,
+        "longitude": -73.9851,
+    }
+
+
+def test_reachable_areas_endpoint_rejects_empty_people():
+    response = TestClient(app).post("/api/reachable-areas", json={"people": []})
+
+    assert response.status_code == 422

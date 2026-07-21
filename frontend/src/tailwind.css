@@ -5,6 +5,14 @@
   --color-primary: #303841;
   --color-secondary: #76ABAE;
   --color-text: #FF5722;
+  --color-person-area-1: #77BEF0;
+  --color-person-area-2: #FFCB61;
+  --color-person-area-3: #FF894F;
+  --color-person-area-4: #EA5B6F;
+  --color-person-area-5: #EEFABD;
+  --color-person-area-6: #A0D585;
+  --color-person-area-7: #6984A9;
+  --color-person-area-8: #263B6A;
 }
 
 * {
