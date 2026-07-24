@@ -5,6 +5,7 @@ import ReachableAreaMapPage from './ReachableAreaMapPage'
 
 const addSource = vi.fn()
 const addLayer = vi.fn()
+const addImage = vi.fn()
 const fitBounds = vi.fn()
 const remove = vi.fn()
 const markerSetLngLat = vi.fn().mockReturnThis()
@@ -20,6 +21,7 @@ vi.mock('mapbox-gl', () => ({
 
       addSource = addSource
       addLayer = addLayer
+      addImage = addImage
       fitBounds = fitBounds
       remove = remove
     },
@@ -53,6 +55,13 @@ const elena: Person = {
   preferences: '',
 }
 
+const noah: Person = {
+  name: 'Noah',
+  availability: { start: '17:30', end: '20:00' },
+  location: { latitude: 40.7489, longitude: -73.9751 },
+  preferences: '',
+}
+
 const area = {
   type: 'Polygon' as const,
   coordinates: [[[-73.99, 40.75], [-73.98, 40.75], [-73.98, 40.76], [-73.99, 40.75]]],
@@ -60,6 +69,16 @@ const area = {
 
 beforeEach(() => {
   vi.stubEnv('VITE_MAPBOX_ACCESS_TOKEN', 'test-token')
+  vi.stubGlobal(
+    'ImageData',
+    class MockImageData {
+      constructor(
+        public data: Uint8ClampedArray,
+        public width: number,
+        public height: number,
+      ) {}
+    },
+  )
 })
 
 afterEach(() => {
@@ -78,7 +97,9 @@ test('loads and plots individual areas plus overlap', async () => {
 
   await waitFor(() => expect(addSource).toHaveBeenCalledWith('person-area-0', expect.any(Object)))
   expect(addSource).toHaveBeenCalledWith('overlap-area', expect.any(Object))
+  expect(addImage).toHaveBeenCalledWith('overlap-stripes', expect.any(Object))
   expect(markerSetLngLat).toHaveBeenCalledWith([-73.9851, 40.7589])
+  expect(fitBounds).toHaveBeenCalled()
 })
 
 test('explains a valid no-overlap response', async () => {
@@ -89,7 +110,7 @@ test('explains a valid no-overlap response', async () => {
     overlap: null,
   })
 
-  render(<ReachableAreaMapPage people={[elena]} onBack={vi.fn()} />)
+  render(<ReachableAreaMapPage people={[elena, noah]} onBack={vi.fn()} />)
 
   expect(await screen.findByText('No common reachable area for every selected person.')).toBeInTheDocument()
 })

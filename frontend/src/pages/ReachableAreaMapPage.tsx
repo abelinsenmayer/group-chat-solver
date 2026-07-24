@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { renderToString } from 'react-dom/server'
+import { CircleUserRound } from 'lucide-react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { getPersonAreaColor } from '../lib/person-colors'
@@ -14,6 +16,55 @@ function featureCollection(geometry: GeoJsonGeometry) {
     type: 'FeatureCollection' as const,
     features: [{ type: 'Feature' as const, properties: {}, geometry }],
   }
+}
+
+function extendBoundsWithGeometry(bounds: mapboxgl.LngLatBounds, geometry: GeoJsonGeometry) {
+  if (geometry.type === 'Polygon') {
+    geometry.coordinates.forEach((ring) => {
+      ring.forEach((coord) => bounds.extend(coord as [number, number]))
+    })
+  } else if (geometry.type === 'MultiPolygon') {
+    geometry.coordinates.forEach((polygon) => {
+      polygon.forEach((ring) => {
+        ring.forEach((coord) => bounds.extend(coord as [number, number]))
+      })
+    })
+  }
+}
+
+function createStripePattern(size = 16): ImageData | null {
+  if (typeof ImageData === 'undefined') return null
+
+  const data = new Uint8ClampedArray(size * size * 4)
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const isBackground = (x + y) % 8 < 4
+      const offset = (y * size + x) * 4
+      data[offset] = isBackground ? 255 : 221
+      data[offset + 1] = isBackground ? 255 : 221
+      data[offset + 2] = isBackground ? 255 : 221
+      data[offset + 3] = 255
+    }
+  }
+  return new ImageData(data, size, size)
+}
+
+function createPersonMarkerElement(name: string, color: string): HTMLElement {
+  const wrapper = document.createElement('div')
+  wrapper.style.display = 'flex'
+  wrapper.style.flexDirection = 'column'
+  wrapper.style.alignItems = 'center'
+  wrapper.style.pointerEvents = 'auto'
+  wrapper.setAttribute('aria-label', `${name} location`)
+
+  const personSvg = renderToString(<CircleUserRound className="bg-background rounded-full" color={color} size={28} strokeWidth={2} />)
+  wrapper.innerHTML = `
+    <div style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25)); line-height: 0;">
+      ${personSvg}
+    </div>
+    <span style="color:${color}; font-size:12px; font-weight:700; text-shadow: -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff; white-space: nowrap; margin-top: -2px;">${name}</span>
+  `
+  return wrapper
 }
 
 export default function ReachableAreaMapPage({ people, onBack }: ReachableAreaMapPageProps) {
@@ -43,7 +94,7 @@ export default function ReachableAreaMapPage({ people, onBack }: ReachableAreaMa
   }, [people])
 
   useEffect(() => {
-    if (!accessToken || !mapContainer.current || map.current) return
+    if (!accessToken || !mapContainer.current || map.current || !result) return
 
     mapboxgl.accessToken = accessToken
     const instance = new mapboxgl.Map({
@@ -59,11 +110,16 @@ export default function ReachableAreaMapPage({ people, onBack }: ReachableAreaMa
       instance.remove()
       map.current = null
     }
-  }, [accessToken, people])
+  }, [accessToken, people, result])
 
   useEffect(() => {
     const instance = map.current
     if (!instance || !mapLoaded || !result) return
+
+    const overlapPattern = createStripePattern()
+    if (overlapPattern) {
+      instance.addImage('overlap-stripes', overlapPattern)
+    }
 
     result.people.forEach(({ person, travel_time_minutes: travelTimeMinutes, area }, index) => {
       const color = getPersonAreaColor(index)
@@ -81,38 +137,56 @@ export default function ReachableAreaMapPage({ people, onBack }: ReachableAreaMa
         source: sourceId,
         paint: { 'line-color': color, 'line-width': 2 },
       })
-      new mapboxgl.Marker({ color })
+      const markerElement = createPersonMarkerElement(person.name, color)
+      new mapboxgl.Marker({ element: markerElement, anchor: 'bottom' })
         .setLngLat([person.location.longitude, person.location.latitude])
-        .setPopup(new mapboxgl.Popup().setText(`${person.name}: ${travelTimeMinutes} minutes`))
         .addTo(instance)
     })
 
     if (result.overlap) {
       instance.addSource('overlap-area', { type: 'geojson', data: featureCollection(result.overlap) })
+      const overlapFillPaint = overlapPattern
+        ? { 'fill-pattern': 'overlap-stripes', 'fill-opacity': 0.4 }
+        : { 'fill-color': '#FFFFFF', 'fill-opacity': 0.45 }
       instance.addLayer({
         id: 'overlap-fill',
         type: 'fill',
         source: 'overlap-area',
-        paint: { 'fill-color': '#303841', 'fill-opacity': 0.36 },
+        paint: overlapFillPaint,
       })
       instance.addLayer({
         id: 'overlap-line',
         type: 'line',
         source: 'overlap-area',
-        paint: { 'line-color': '#303841', 'line-width': 3 },
+        paint: { 'line-color': '#FFFFFF', 'line-width': 2 },
       })
     }
 
     const bounds = new mapboxgl.LngLatBounds()
-    people.forEach((person) => bounds.extend([person.location.longitude, person.location.latitude]))
-    instance.fitBounds(bounds, { padding: 80, maxZoom: 12 })
+    let hasCoordinate = false
+    const extend = (coord: [number, number]) => {
+      bounds.extend(coord)
+      hasCoordinate = true
+    }
+
+    people.forEach((person) => {
+      extend([person.location.longitude, person.location.latitude])
+    })
+    result.people.forEach(({ area }) => extendBoundsWithGeometry(bounds, area))
+    if (result.overlap) extendBoundsWithGeometry(bounds, result.overlap)
+
+    if (hasCoordinate) {
+      instance.fitBounds(bounds, { padding: 80, maxZoom: 15 })
+    }
   }, [mapLoaded, people, result])
 
-  const statusMessage = result?.status === 'no_common_availability'
-    ? 'No common availability for every selected person.'
-    : result?.status === 'no_common_reachable_area'
-      ? 'No common reachable area for every selected person.'
-      : null
+  const statusMessage = people.length <= 1 
+    ? null 
+    : result?.status === 'no_common_availability'
+      ? 'No common availability for every selected person.'
+      : result?.status === 'no_common_reachable_area'
+        ? 'No common reachable area for every selected person.'
+        : null
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-secondary">

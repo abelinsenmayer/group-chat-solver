@@ -45,8 +45,11 @@ export default function PersonPickerPage({ onNext }: PersonPickerPageProps) {
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-6 py-10 sm:px-12 sm:py-16">
-      <header className="mx-auto max-w-2xl text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-secondary sm:text-4xl">Group Chat "Solver"</h1>
+      <header className="mx-auto max-w-2xl flex flex-col items-center justify-center">
+        <div className="">
+          <p className="text-sm text-secondary text-start">Abe Linsenmayer's</p>
+          <h1 className="text-3xl font-bold tracking-tight text-secondary sm:text-4xl">Group Chat "Solver"</h1>
+        </div>
         <p className="mt-14 text-base text-secondary">Choose the people you want to include in this simulation.</p>
       </header>
 
