@@ -45,6 +45,31 @@ def test_people_endpoint_returns_serialized_sample_people():
     ]
 
 
+def test_event_timeline_endpoint_returns_solver_result():
+    payload = {
+        "people": [
+            {
+                "name": "Elena",
+                "availability": {"start": "17:30", "end": "20:00"},
+                "location": {"latitude": 40.7589, "longitude": -73.9851},
+                "preferences": "",
+            }
+        ]
+    }
+    result = {
+        "status": "ok",
+        "common_window": {"start": "17:30", "end": "20:00"},
+        "optimal_start_time": "18:00",
+        "optimal_end_time": "19:00",
+    }
+
+    with patch("src.api.solve_event_timeline", return_value=result):
+        response = TestClient(app).post("/api/event-timeline", json=payload)
+
+    assert response.status_code == 200
+    assert response.json() == result
+
+
 def test_reachable_areas_endpoint_returns_solver_result():
     payload = {
         "people": [
@@ -74,6 +99,27 @@ def test_reachable_areas_endpoint_returns_solver_result():
         "latitude": 40.7589,
         "longitude": -73.9851,
     }
+
+
+def test_reachable_areas_endpoint_uses_confirmed_event_start_time():
+    payload = {
+        "people": [
+            {
+                "name": "Elena",
+                "availability": {"start": "17:30", "end": "20:00"},
+                "location": {"latitude": 40.7589, "longitude": -73.9851},
+                "preferences": "",
+            }
+        ],
+        "event_start_time": "18:00",
+    }
+    result = {"status": "ok", "optimal_start_time": "18:00", "people": [], "overlap": None}
+
+    with patch("src.api.solve_reachable_areas", return_value=result) as solve:
+        response = TestClient(app).post("/api/reachable-areas", json=payload)
+
+    assert response.status_code == 200
+    assert solve.call_args.args[1] == time(18)
 
 
 def test_reachable_areas_endpoint_rejects_empty_people():

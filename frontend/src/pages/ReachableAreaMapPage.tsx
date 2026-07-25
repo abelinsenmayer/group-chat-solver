@@ -4,10 +4,11 @@ import { CircleUserRound } from 'lucide-react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { getPersonAreaColor } from '../lib/person-colors'
-import { fetchReachableAreas, type GeoJsonGeometry, type Person, type ReachableAreaResponse } from '../lib/people-api'
+import { fetchReachableAreas, type EventTimelineResponse, type GeoJsonGeometry, type Person, type ReachableAreaResponse } from '../lib/people-api'
 
 type ReachableAreaMapPageProps = {
   people: Person[]
+  timeline: EventTimelineResponse
   onBack: () => void
 }
 
@@ -67,7 +68,7 @@ function createPersonMarkerElement(name: string, color: string): HTMLElement {
   return wrapper
 }
 
-export default function ReachableAreaMapPage({ people, onBack }: ReachableAreaMapPageProps) {
+export default function ReachableAreaMapPage({ people, timeline, onBack }: ReachableAreaMapPageProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -80,7 +81,7 @@ export default function ReachableAreaMapPage({ people, onBack }: ReachableAreaMa
     setResult(null)
     setError(false)
 
-    void fetchReachableAreas(people)
+    void fetchReachableAreas(people, timeline.optimal_start_time ?? undefined)
       .then((response) => {
         if (active) setResult(response)
       })
@@ -91,7 +92,7 @@ export default function ReachableAreaMapPage({ people, onBack }: ReachableAreaMa
     return () => {
       active = false
     }
-  }, [people])
+  }, [people, timeline.optimal_start_time])
 
   useEffect(() => {
     if (!accessToken || !mapContainer.current || map.current || !result) return
@@ -121,7 +122,7 @@ export default function ReachableAreaMapPage({ people, onBack }: ReachableAreaMa
       instance.addImage('overlap-stripes', overlapPattern)
     }
 
-    result.people.forEach(({ person, travel_time_minutes: travelTimeMinutes, area }, index) => {
+    result.people.forEach(({ person, area }, index) => {
       const color = getPersonAreaColor(index)
       const sourceId = `person-area-${index}`
       instance.addSource(sourceId, { type: 'geojson', data: featureCollection(area) })
@@ -193,7 +194,7 @@ export default function ReachableAreaMapPage({ people, onBack }: ReachableAreaMa
       <header className="flex flex-wrap items-center justify-between gap-4 px-6 py-5 sm:px-12">
         <div>
           <h1 className="text-3xl font-bold">Reachable Area Map</h1>
-          {result?.optimal_start_time && <p className="mt-1">Suggested start time: {result.optimal_start_time}</p>}
+          {timeline.optimal_start_time && timeline.optimal_end_time && <p className="mt-1">Suggested event: {timeline.optimal_start_time}–{timeline.optimal_end_time}</p>}
         </div>
         <button type="button" onClick={onBack} className="rounded-md border-2 border-secondary px-4 py-2 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary">Back</button>
       </header>

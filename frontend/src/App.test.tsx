@@ -63,7 +63,7 @@ test('disables Next until a person is selected', async () => {
   expect(await screen.findByRole('button', { name: /next/i })).toBeDisabled()
 })
 
-test('shows the reachable area map after selecting a person', async () => {
+test('shows the event timeline after selecting a person', async () => {
   const user = userEvent.setup()
   mockPeopleRequest()
   render(<App />)
@@ -71,5 +71,5 @@ test('shows the reachable area map after selecting a person', async () => {
   await user.click(await screen.findByRole('button', { name: /elena/i }))
   await user.click(screen.getByRole('button', { name: /next/i }))
 
-  expect(screen.getByRole('heading', { name: /reachable area map/i })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: /event timeline optimizer/i })).toBeInTheDocument()
 })

@@ -35,6 +35,31 @@ def solve_group_chat(persons: list[Person]):
     pass
 
 
+def solve_event_timeline(persons: list[Person]) -> dict[str, object]:
+    if not persons:
+        raise ValueError("at least one person is required")
+
+    window, excluded = find_common_window(persons)
+    if window is None or excluded:
+        return {
+            "status": "no_common_availability",
+            "common_window": None,
+            "optimal_start_time": None,
+            "optimal_end_time": None,
+        }
+
+    start_time = find_ideal_start_time(window, persons)
+    return {
+        "status": "ok",
+        "common_window": {
+            "start": window[0].strftime("%H:%M"),
+            "end": window[1].strftime("%H:%M"),
+        },
+        "optimal_start_time": start_time.strftime("%H:%M"),
+        "optimal_end_time": add_hours_to_time(start_time, 1).strftime("%H:%M"),
+    }
+
+
 def _availability_duration_minutes(person: Person) -> int:
     start, end = person.availability
     start_minutes = start.hour * 60 + start.minute
@@ -48,14 +73,16 @@ def _travel_time_minutes(person: Person, start_time: time) -> int:
     return max(1, int(max(0.0, min(pre_hours, post_hours)) * 60))
 
 
-def solve_reachable_areas(persons: list[Person]) -> dict[str, object]:
+def solve_reachable_areas(
+    persons: list[Person], event_start_time: time | None = None
+) -> dict[str, object]:
     if not persons:
         raise ValueError("at least one person is required")
 
     window, excluded = find_common_window(persons)
-    start_time = None
-    status = "no_common_availability"
-    if window is not None and not excluded:
+    start_time = event_start_time
+    status = "ok" if start_time is not None else "no_common_availability"
+    if start_time is None and window is not None and not excluded:
         start_time = find_ideal_start_time(window, persons)
         status = "ok"
 

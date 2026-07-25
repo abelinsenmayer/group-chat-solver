@@ -3,8 +3,8 @@ export const PERSON_AREA_COLORS = [
   '#FFCB61',
   '#FF894F',
   '#EA5B6F',
-  '#EEFABD',
-  '#A0D585',
+  '#80d19d',
+  '#b080d1',
   '#6984A9',
   '#263B6A',
 ] as const

@@ -1,11 +1,12 @@
 import importlib.util
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from src.person_json import person_from_json, person_to_json
-from src.solver import solve_reachable_areas
+from src.solver import solve_event_timeline, solve_reachable_areas
 from fastapi.middleware.cors import CORSMiddleware
 
 sample_people_path = Path(__file__).resolve().parent.parent / "sample-data" / "sample_people.py"
@@ -25,17 +26,37 @@ app.add_middleware(
 )
 
 
+class EventTimelineRequest(BaseModel):
+    people: list[dict[str, object]] = Field(min_length=1)
+
+
 class ReachableAreasRequest(BaseModel):
     people: list[dict[str, object]] = Field(min_length=1)
+    event_start_time: str | None = None
+
+
+def people_from_request(payload: list[dict[str, object]]):
+    try:
+        return [person_from_json(person) for person in payload]
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.post("/api/event-timeline")
+def get_event_timeline(request: EventTimelineRequest) -> dict[str, object]:
+    return solve_event_timeline(people_from_request(request.people))
 
 
 @app.post("/api/reachable-areas")
 def get_reachable_areas(request: ReachableAreasRequest) -> dict[str, object]:
-    try:
-        people = [person_from_json(person) for person in request.people]
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
-    result = solve_reachable_areas(people)
+    event_start_time = None
+    if request.event_start_time is not None:
+        try:
+            event_start_time = datetime.strptime(request.event_start_time, "%H:%M").time()
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail="event_start_time must use HH:MM format") from error
+
+    result = solve_reachable_areas(people_from_request(request.people), event_start_time)
     result["people"] = [
         {**entry, "person": person_to_json(entry["person"])}
         for entry in result["people"]

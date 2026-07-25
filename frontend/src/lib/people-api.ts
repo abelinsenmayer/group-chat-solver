@@ -21,6 +21,13 @@ export type GeoJsonGeometry =
     coordinates: number[][][][]
   }
 
+export type EventTimelineResponse = {
+  status: 'ok' | 'no_common_availability'
+  common_window: { start: string; end: string } | null
+  optimal_start_time: string | null
+  optimal_end_time: string | null
+}
+
 export type ReachableAreaResult = {
   person: Person
   travel_time_minutes: number
@@ -46,11 +53,28 @@ export async function fetchPeople(): Promise<Person[]> {
   return response.json() as Promise<Person[]>
 }
 
-export async function fetchReachableAreas(people: Person[]): Promise<ReachableAreaResponse> {
-  const response = await fetch(`${apiBaseUrl}/api/reachable-areas`, {
+export async function fetchEventTimeline(people: Person[]): Promise<EventTimelineResponse> {
+  const response = await fetch(`${apiBaseUrl}/api/event-timeline`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ people }),
+  })
+
+  if (!response.ok) {
+    throw new Error('Unable to load event timeline.')
+  }
+
+  return response.json() as Promise<EventTimelineResponse>
+}
+
+export async function fetchReachableAreas(
+  people: Person[],
+  eventStartTime?: string,
+): Promise<ReachableAreaResponse> {
+  const response = await fetch(`${apiBaseUrl}/api/reachable-areas`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ people, ...(eventStartTime ? { event_start_time: eventStartTime } : {}) }),
   })
 
   if (!response.ok) {

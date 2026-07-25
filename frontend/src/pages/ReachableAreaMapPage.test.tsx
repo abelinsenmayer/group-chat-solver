@@ -67,6 +67,13 @@ const area = {
   coordinates: [[[-73.99, 40.75], [-73.98, 40.75], [-73.98, 40.76], [-73.99, 40.75]]],
 }
 
+const timeline = {
+  status: 'ok' as const,
+  common_window: { start: '17:30', end: '20:00' },
+  optimal_start_time: '18:00',
+  optimal_end_time: '19:00',
+}
+
 beforeEach(() => {
   vi.stubEnv('VITE_MAPBOX_ACCESS_TOKEN', 'test-token')
   vi.stubGlobal(
@@ -93,7 +100,7 @@ test('loads and plots individual areas plus overlap', async () => {
     overlap: area,
   })
 
-  render(<ReachableAreaMapPage people={[elena]} onBack={vi.fn()} />)
+  render(<ReachableAreaMapPage people={[elena]} timeline={timeline} onBack={vi.fn()} />)
 
   await waitFor(() => expect(addSource).toHaveBeenCalledWith('person-area-0', expect.any(Object)))
   expect(addSource).toHaveBeenCalledWith('overlap-area', expect.any(Object))
@@ -110,7 +117,7 @@ test('explains a valid no-overlap response', async () => {
     overlap: null,
   })
 
-  render(<ReachableAreaMapPage people={[elena, noah]} onBack={vi.fn()} />)
+  render(<ReachableAreaMapPage people={[elena, noah]} timeline={timeline} onBack={vi.fn()} />)
 
   expect(await screen.findByText('No common reachable area for every selected person.')).toBeInTheDocument()
 })
