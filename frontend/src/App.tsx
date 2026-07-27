@@ -3,14 +3,19 @@ import type { EventTimelineResponse, Person } from './lib/people-api'
 import PersonPickerPage from './pages/PersonPickerPage'
 import EventTimelinePage from './pages/EventTimelinePage'
 import ReachableAreaMapPage from './pages/ReachableAreaMapPage'
+import MeetTheAgentsPage from './pages/MeetTheAgentsPage'
 
 function App() {
   const [selectedPeople, setSelectedPeople] = useState<Person[]>([])
   const [timeline, setTimeline] = useState<EventTimelineResponse | null>(null)
-  const [page, setPage] = useState<'picker' | 'timeline' | 'map'>('picker')
+  const [page, setPage] = useState<'picker' | 'timeline' | 'map' | 'agents'>('picker')
+
+  if (page === 'agents') {
+    return <MeetTheAgentsPage people={selectedPeople} onBack={() => setPage('map')} onNext={() => {}} />
+  }
 
   if (page === 'map' && timeline) {
-    return <ReachableAreaMapPage people={selectedPeople} timeline={timeline} onBack={() => setPage('timeline')} />
+    return <ReachableAreaMapPage people={selectedPeople} timeline={timeline} onBack={() => setPage('timeline')} onNext={() => setPage('agents')} />
   }
 
   if (page === 'timeline') {

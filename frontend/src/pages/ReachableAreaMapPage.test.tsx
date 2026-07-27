@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { fetchReachableAreas, type Person } from '../lib/people-api'
+import { fetchReachableAreas, type Person, type ReachableAreaResponse } from '../lib/people-api'
 import ReachableAreaMapPage from './ReachableAreaMapPage'
 
 const addSource = vi.fn()
@@ -92,6 +92,17 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
+test('shows selected people and map loading placeholders before reachable areas load', () => {
+  vi.mocked(fetchReachableAreas).mockReturnValue(new Promise<ReachableAreaResponse>(() => {}))
+
+  render(<ReachableAreaMapPage people={[elena, noah]} timeline={timeline} onBack={vi.fn()} onNext={vi.fn()} />)
+
+  expect(screen.getByText('Elena')).toBeInTheDocument()
+  expect(screen.getByText('Noah')).toBeInTheDocument()
+  expect(screen.getAllByText('Loading...')).toHaveLength(3)
+  expect(screen.getByLabelText('Reachable area map')).toBeInTheDocument()
+})
+
 test('loads and plots individual areas plus overlap', async () => {
   vi.mocked(fetchReachableAreas).mockResolvedValue({
     status: 'ok',
@@ -100,13 +111,16 @@ test('loads and plots individual areas plus overlap', async () => {
     overlap: area,
   })
 
-  render(<ReachableAreaMapPage people={[elena]} timeline={timeline} onBack={vi.fn()} />)
+  render(<ReachableAreaMapPage people={[elena]} timeline={timeline} onBack={vi.fn()} onNext={vi.fn()} />)
 
   await waitFor(() => expect(addSource).toHaveBeenCalledWith('person-area-0', expect.any(Object)))
   expect(addSource).toHaveBeenCalledWith('overlap-area', expect.any(Object))
   expect(addImage).toHaveBeenCalledWith('overlap-stripes', expect.any(Object))
   expect(markerSetLngLat).toHaveBeenCalledWith([-73.9851, 40.7589])
   expect(fitBounds).toHaveBeenCalled()
+  expect(await screen.findByText('Elena')).toBeInTheDocument()
+  expect(screen.getByText('Travel time: 30 min')).toBeInTheDocument()
+  expect(screen.getByLabelText('Reachable area map')).toBeInTheDocument()
 })
 
 test('explains a valid no-overlap response', async () => {
@@ -117,7 +131,7 @@ test('explains a valid no-overlap response', async () => {
     overlap: null,
   })
 
-  render(<ReachableAreaMapPage people={[elena, noah]} timeline={timeline} onBack={vi.fn()} />)
+  render(<ReachableAreaMapPage people={[elena, noah]} timeline={timeline} onBack={vi.fn()} onNext={vi.fn()} />)
 
   expect(await screen.findByText('No common reachable area for every selected person.')).toBeInTheDocument()
 })

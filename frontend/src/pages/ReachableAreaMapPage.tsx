@@ -10,6 +10,7 @@ type ReachableAreaMapPageProps = {
   people: Person[]
   timeline: EventTimelineResponse
   onBack: () => void
+  onNext: () => void
 }
 
 function featureCollection(geometry: GeoJsonGeometry) {
@@ -68,7 +69,7 @@ function createPersonMarkerElement(name: string, color: string): HTMLElement {
   return wrapper
 }
 
-export default function ReachableAreaMapPage({ people, timeline, onBack }: ReachableAreaMapPageProps) {
+export default function ReachableAreaMapPage({ people, timeline, onBack, onNext }: ReachableAreaMapPageProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
@@ -188,6 +189,9 @@ export default function ReachableAreaMapPage({ people, timeline, onBack }: Reach
       : result?.status === 'no_common_reachable_area'
         ? 'No common reachable area for every selected person.'
         : null
+  const legendPeople = result
+    ? result.people.map(({ person, travel_time_minutes }) => ({ person, travelTimeMinutes: travel_time_minutes }))
+    : people.map((person) => ({ person, travelTimeMinutes: null }))
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-secondary">
@@ -196,14 +200,38 @@ export default function ReachableAreaMapPage({ people, timeline, onBack }: Reach
           <h1 className="text-3xl font-bold">Reachable Area Map</h1>
           {timeline.optimal_start_time && timeline.optimal_end_time && <p className="mt-1">Suggested event: {timeline.optimal_start_time}–{timeline.optimal_end_time}</p>}
         </div>
-        <button type="button" onClick={onBack} className="rounded-md border-2 border-secondary px-4 py-2 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary">Back</button>
+        <div className="flex gap-3">
+          <button type="button" onClick={onBack} className="rounded-md border-2 border-secondary px-4 py-2 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary">Back</button>
+          <button type="button" onClick={onNext} className="rounded-md border-2 border-secondary px-4 py-2 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary">Next <span aria-hidden="true">→</span></button>
+        </div>
       </header>
       <section className="px-6 pb-4 sm:px-12" aria-live="polite">
         {!accessToken && <p>Mapbox access token is not configured.</p>}
         {error && <p>Unable to load reachable areas.</p>}
         {statusMessage && <p>{statusMessage}</p>}
       </section>
-      {accessToken && <div ref={mapContainer} className="min-h-125 flex-1" aria-label="Reachable area map" />}
+      {accessToken && (
+        <section className="mx-auto grid w-full max-w-5xl items-center gap-8 px-6 pb-10 sm:grid-cols-[12rem_minmax(0,1fr)] sm:px-12" aria-label="Reachable area details">
+          <div className="space-y-8">
+            {legendPeople.map(({ person, travelTimeMinutes }, index) => {
+              const color = getPersonAreaColor(index)
+              return (
+                <div key={person.name} className="flex items-center gap-3">
+                  <CircleUserRound className="shrink-0 rounded-full bg-background" color={color} size={34} strokeWidth={2} />
+                  <div>
+                    <p className="font-bold">{person.name}</p>
+                    <p className="text-sm">{travelTimeMinutes === null ? 'Loading...' : `Travel time: ${travelTimeMinutes} min`}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="relative aspect-square overflow-hidden rounded-2xl border-2 border-secondary">
+            <div ref={mapContainer} className="h-full w-full" aria-label="Reachable area map" />
+            {!mapLoaded && <p className="absolute inset-0 grid place-items-center bg-background">Loading...</p>}
+          </div>
+        </section>
+      )}
     </main>
   )
 }

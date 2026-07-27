@@ -9,8 +9,8 @@
   --color-person-area-2: #FFCB61;
   --color-person-area-3: #FF894F;
   --color-person-area-4: #EA5B6F;
-  --color-person-area-5: #EEFABD;
-  --color-person-area-6: #A0D585;
+  --color-person-area-5: #80d19d;
+  --color-person-area-6: #b080d1;
   --color-person-area-7: #6984A9;
   --color-person-area-8: #263B6A;
 }
@@ -35,4 +35,19 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+@keyframes fly-in {
+  from {
+    opacity: 0;
+    transform: translateX(-3rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@utility animate-fly-in {
+  animation: fly-in 0.5s ease-out;
 }
