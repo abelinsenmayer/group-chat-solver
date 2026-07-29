@@ -10,7 +10,7 @@ type ReachableAreaMapPageProps = {
   people: Person[]
   timeline: EventTimelineResponse
   onBack: () => void
-  onNext: () => void
+  onNext: (overlap: GeoJsonGeometry) => void
 }
 
 function featureCollection(geometry: GeoJsonGeometry) {
@@ -202,7 +202,14 @@ export default function ReachableAreaMapPage({ people, timeline, onBack, onNext 
         </div>
         <div className="flex gap-3">
           <button type="button" onClick={onBack} className="rounded-md border-2 border-secondary px-4 py-2 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary">Back</button>
-          <button type="button" onClick={onNext} className="rounded-md border-2 border-secondary px-4 py-2 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary">Next <span aria-hidden="true">→</span></button>
+          <button
+            type="button"
+            disabled={!result?.overlap}
+            onClick={() => result?.overlap && onNext(result.overlap)}
+            className="rounded-md border-2 border-secondary px-4 py-2 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-secondary"
+          >
+            Next <span aria-hidden="true">→</span>
+          </button>
         </div>
       </header>
       <section className="px-6 pb-4 sm:px-12" aria-live="polite">

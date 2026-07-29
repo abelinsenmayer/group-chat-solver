@@ -5,9 +5,13 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from src.logging_config import configure_logging
 from src.person_json import person_from_json, person_to_json
+from src.solve_restaurants.graph import start_solve_restaurants
 from src.solver import solve_event_timeline, solve_reachable_areas
 from fastapi.middleware.cors import CORSMiddleware
+
+configure_logging()
 
 sample_people_path = Path(__file__).resolve().parent.parent / "sample-data" / "sample_people.py"
 spec = importlib.util.spec_from_file_location("sample_people", sample_people_path)
@@ -33,6 +37,11 @@ class EventTimelineRequest(BaseModel):
 class ReachableAreasRequest(BaseModel):
     people: list[dict[str, object]] = Field(min_length=1)
     event_start_time: str | None = None
+
+
+class SolveRestaurantsRequest(BaseModel):
+    people: list[dict[str, object]] = Field(min_length=1)
+    overlap: dict[str, object]
 
 
 def people_from_request(payload: list[dict[str, object]]):
@@ -62,6 +71,13 @@ def get_reachable_areas(request: ReachableAreasRequest) -> dict[str, object]:
         for entry in result["people"]
     ]
     return result
+
+
+@app.post("/api/solve-restaurants")
+async def solve_restaurants(request: SolveRestaurantsRequest) -> dict[str, object]:
+    people = people_from_request(request.people)
+    run_id, _ = start_solve_restaurants(people, request.overlap)
+    return {"run_id": run_id, "status": "started"}
 
 
 @app.get("/api/people")

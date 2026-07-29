@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import time
 from functools import reduce
@@ -10,6 +11,8 @@ from shapely.geometry.base import BaseGeometry
 
 from src.person import Person
 from src.time_util import add_hours_to_time, hours_between
+
+logger = logging.getLogger(__name__)
 
 
 def compute_bounding_box(
@@ -219,9 +222,9 @@ def find_reachable_area(
         "access_token": access_token,
     }
 
-    print(url, params)
+    logger.info("Mapbox request: %s %s", url, params)
     response = requests.get(url, params=params, timeout=30)
-    print(response.json())
+    logger.info("Mapbox response: %s", response.json())
     response.raise_for_status()
 
     data = response.json()

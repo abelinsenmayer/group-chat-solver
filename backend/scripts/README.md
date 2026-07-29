@@ -1,6 +1,10 @@
 # Scripts
 
-Run the commands below from the backend repository root after `uv sync`.
+Run the commands below from the `backend` directory after `uv sync`.
+
+```bash
+cd backend
+```
 
 ## Direct prompt
 
@@ -8,6 +12,14 @@ Send a prompt to the selected model backend.
 
 ```bash
 uv run python scripts/direct_prompt.py "What time works for everyone?" --backend ollama
+```
+
+## Test Ollama
+
+Verify that the Ollama backend is reachable through the same `ChatOllama` client used by the conversation solver.
+
+```bash
+uv run python scripts/test_ollama.py "What is the capital of France?" -v
 ```
 
 ## Reachable area

@@ -41,6 +41,11 @@ export type ReachableAreaResponse = {
   overlap: GeoJsonGeometry | null
 }
 
+export type SolveRestaurantsResponse = {
+  run_id: string
+  status: string
+}
+
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
 
 export async function fetchPeople(): Promise<Person[]> {
@@ -82,4 +87,21 @@ export async function fetchReachableAreas(
   }
 
   return response.json() as Promise<ReachableAreaResponse>
+}
+
+export async function fetchSolveRestaurants(
+  people: Person[],
+  overlap: GeoJsonGeometry,
+): Promise<SolveRestaurantsResponse> {
+  const response = await fetch(`${apiBaseUrl}/api/solve-restaurants`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ people, overlap }),
+  })
+
+  if (!response.ok) {
+    throw new Error('Unable to start restaurant solver.')
+  }
+
+  return response.json() as Promise<SolveRestaurantsResponse>
 }

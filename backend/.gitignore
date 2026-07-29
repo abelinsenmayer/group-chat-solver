@@ -34,3 +34,6 @@ ENV/
 
 # uv
 .uv/
+
+# Logs
+logs/
