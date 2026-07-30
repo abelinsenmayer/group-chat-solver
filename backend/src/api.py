@@ -7,11 +7,13 @@ from pydantic import BaseModel, Field
 
 from src.logging_config import configure_logging
 from src.person_json import person_from_json, person_to_json
+from src.solve_restaurants.config import configure_langsmith_tracing
 from src.solve_restaurants.graph import start_solve_restaurants
 from src.solver import solve_event_timeline, solve_reachable_areas
 from fastapi.middleware.cors import CORSMiddleware
 
 configure_logging()
+configure_langsmith_tracing()
 
 sample_people_path = Path(__file__).resolve().parent.parent / "sample-data" / "sample_people.py"
 spec = importlib.util.spec_from_file_location("sample_people", sample_people_path)

@@ -12,21 +12,24 @@ export default function PersonPickerPage({ onNext }: PersonPickerPageProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
-  const loadPeople = useCallback(async () => {
+  const loadPeople = useCallback(async (signal?: AbortSignal) => {
     setLoading(true)
     setError(false)
 
     try {
-      setPeople(await fetchPeople())
-    } catch {
+      setPeople(await fetchPeople(signal))
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       setError(true)
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    void loadPeople()
+    const controller = new AbortController()
+    void loadPeople(controller.signal)
+    return () => controller.abort()
   }, [loadPeople])
 
   const togglePerson = (name: string) => {

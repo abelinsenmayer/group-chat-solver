@@ -11,19 +11,20 @@ export default function SolveRestaurantsPage({ people, overlap, onBack }: SolveR
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
 
   useEffect(() => {
-    let active = true
+    const controller = new AbortController()
     setStatus('loading')
 
-    void fetchSolveRestaurants(people, overlap)
+    void fetchSolveRestaurants(people, overlap, controller.signal)
       .then(() => {
-        if (active) setStatus('success')
+        setStatus('success')
       })
-      .catch(() => {
-        if (active) setStatus('error')
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        setStatus('error')
       })
 
     return () => {
-      active = false
+      controller.abort()
     }
   }, [people, overlap])
 

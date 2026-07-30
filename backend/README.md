@@ -26,6 +26,24 @@ Run the main application:
 uv run python src/main.py
 ```
 
+## Tracing (LangSmith)
+
+The planner/judge LangGraph agents are traced automatically by LangSmith when enabled.
+Set these in your `.env` file (or as environment variables):
+
+```bash
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=lsv2_pt_your_api_key_here
+LANGSMITH_PROJECT=group-chat-solver   # optional, defaults to "group-chat-solver"
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com   # optional, for self-hosted/EU instances
+```
+
+No code changes are needed beyond this configuration — `configure_langsmith_tracing()`
+(called on API startup) propagates these settings to the environment so LangChain's
+built-in tracing picks them up for every agent/LLM call. The `planner` and `judge`
+graph nodes are additionally wrapped with `@traceable` to group each node's work
+under a single named trace span.
+
 ## Development
 
 Add new dependencies:

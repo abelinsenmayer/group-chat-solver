@@ -115,6 +115,24 @@
       "skillPath": "config/skills/langgraph-typescript-quickstart/SKILL.md",
       "computedHash": "6ec171c34aa155308af416b7cb2f8be64f6226ee7e2be4dca9d6180bb2d47081"
     },
+    "langsmith-dataset": {
+      "source": "langchain-ai/langsmith-skills",
+      "sourceType": "github",
+      "skillPath": "config/skills/langsmith-dataset/SKILL.md",
+      "computedHash": "b18bc199f25a2519678ecdc8a7f6a6eb118c4332b6ad2e6f65f7e5a75bcec2bc"
+    },
+    "langsmith-evaluator": {
+      "source": "langchain-ai/langsmith-skills",
+      "sourceType": "github",
+      "skillPath": "config/skills/langsmith-evaluator/SKILL.md",
+      "computedHash": "69d3bb64f4300051c046929ae040272e26eceb995fe01b5ebdde01240fafcaaf"
+    },
+    "langsmith-trace": {
+      "source": "langchain-ai/langsmith-skills",
+      "sourceType": "github",
+      "skillPath": "config/skills/langsmith-trace/SKILL.md",
+      "computedHash": "3ef4abf90e1d7fab5faeefd27cbf4b44ed57e10f321e174afab294fd86bc7e1b"
+    },
     "managed-deep-agents": {
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",

@@ -1,10 +1,13 @@
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from .config import get_settings
 from .state import SolveRestaurantsState
+
+logger = logging.getLogger(__name__)
 
 
 def _ensure_log_dir() -> Path:
@@ -41,5 +44,7 @@ def save_run(run_id: str, initial_state: SolveRestaurantsState, final_state: Sol
         "logs": [_elide_coordinates(log.model_dump(mode="json")) for log in final_state.logs],
         "errors": final_state.errors,
     }
+    for log in final_state.logs:
+        logger.debug("[%s] %s: %s", run_id, log.node, log.model_dump(mode="json"))
     path.write_text(json.dumps(record, indent=2), encoding="utf-8")
     return path

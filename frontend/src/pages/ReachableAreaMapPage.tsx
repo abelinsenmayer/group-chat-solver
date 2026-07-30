@@ -78,20 +78,21 @@ export default function ReachableAreaMapPage({ people, timeline, onBack, onNext 
   const accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
 
   useEffect(() => {
-    let active = true
+    const controller = new AbortController()
     setResult(null)
     setError(false)
 
-    void fetchReachableAreas(people, timeline.optimal_start_time ?? undefined)
+    void fetchReachableAreas(people, timeline.optimal_start_time ?? undefined, controller.signal)
       .then((response) => {
-        if (active) setResult(response)
+        setResult(response)
       })
-      .catch(() => {
-        if (active) setError(true)
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        setError(true)
       })
 
     return () => {
-      active = false
+      controller.abort()
     }
   }, [people, timeline.optimal_start_time])
 

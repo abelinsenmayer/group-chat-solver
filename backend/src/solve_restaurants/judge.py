@@ -1,41 +1,85 @@
 from datetime import datetime, timezone
+import logging
 
+from langchain.agents import create_agent
+from langchain.agents.middleware import ToolCallLimitMiddleware
+from langchain_core.tools import tool
 from langchain_ollama import ChatOllama
+from langsmith import traceable
 from tavily import TavilyClient
 
 from .config import get_settings
 from .state import JudgeVerdict, PersonPayload, RestaurantSuggestion, StepLog, Verdict
 
 
-def _search_restaurant(client: TavilyClient, name: str, address: str | None, preferences: str) -> str:
-    query = f"{name} {address or ''} menu {preferences}".strip()
-    try:
-        response = client.search(query=query, max_results=3)
-        results = response.get("results", [])
-        return "\n".join(r.get("content", "") for r in results)
-    except Exception as error:
-        return f"Error researching restaurant: {error}"
+logger = logging.getLogger(__name__)
 
 
+def _create_web_search_tool(client: TavilyClient):
+    @tool
+    def web_search(query: str) -> str:
+        """Search the web for information about a restaurant.
+
+        Use this to research a restaurant (menu, reviews, cuisine, dietary options, etc.)
+        before deciding whether it satisfies someone's preferences. Call it again with a
+        different or more specific query if the first results are not useful.
+
+        Args:
+            query: Search terms, e.g. "Veggie Spot 1 Main St menu vegetarian".
+        """
+        try:
+            response = client.search(query=query, max_results=3)
+            results = response.get("results", [])
+            content = "\n".join(r.get("content", "") for r in results)
+            return content or "No results found for this query."
+        except Exception as error:
+            return f"Error researching restaurant: {error}"
+
+    return web_search
+
+
+@traceable(name="judge")
 def judge(payload: dict) -> dict:
     person = PersonPayload.model_validate(payload["person"])
     suggestions = [RestaurantSuggestion.model_validate(s) for s in payload["suggestions"]]
     settings = get_settings()
     client = TavilyClient(api_key=settings.tavily_api_key)
+    web_search_tool = _create_web_search_tool(client)
     llm = ChatOllama(
         base_url=settings.ollama_base_url,
         model=settings.ollama_model,
         temperature=0.2,
     )
-    structured = llm.with_structured_output(JudgeVerdict)
 
     verdicts = {}
     notes = []
     errors = []
     for suggestion in suggestions:
-        research = _search_restaurant(client, suggestion.name, suggestion.address, person.preferences)
+        agent = create_agent(
+            model=llm,
+            tools=[web_search_tool],
+            system_prompt=_judge_prompt(person, suggestion),
+            middleware=[ToolCallLimitMiddleware(tool_name="web_search", run_limit=3)],
+            response_format=JudgeVerdict,
+        )
         try:
-            verdict = structured.invoke(_judge_prompt(person, suggestion, research))
+            result = agent.invoke(
+                {
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": "Research this restaurant using web_search, then give your verdict.",
+                        }
+                    ]
+                },
+                config={"recursion_limit": 12},
+            )
+            logger.debug("Judge result for %s on %s: %s", person.name, suggestion.id, result)
+            verdict = result.get("structured_response") or _recover_structured_response(
+                result.get("messages", [])
+            )
+            if verdict is None:
+                raise ValueError("Judge LLM did not return a usable structured response")
         except Exception as error:
             verdict = JudgeVerdict(verdict=Verdict.REJECTED, feedback=f"unable to verify: {error}")
             errors.append(f"Judge for {person.name} failed on {suggestion.id}: {error}")
@@ -56,13 +100,40 @@ def judge(payload: dict) -> dict:
     }
 
 
-def _judge_prompt(person: PersonPayload, suggestion, research: str) -> str:
+def _recover_structured_response(messages: list) -> JudgeVerdict | None:
+    """Best-effort recovery for a langchain create_agent bug (as of langchain 1.3.x):
+    when the model calls the structured-output tool more than once in the same turn
+    (alongside other tool calls), the agent graph exits without ever populating
+    ``structured_response`` - even if one of the duplicate calls contained perfectly
+    valid, parseable data. Salvage the last valid structured-output attempt found
+    anywhere in the message history, instead of discarding otherwise-usable output.
+    """
+    recovered: JudgeVerdict | None = None
+    for message in messages:
+        tool_calls = getattr(message, "tool_calls", None)
+        if not tool_calls:
+            continue
+        for tool_call in tool_calls:
+            if tool_call.get("name") != JudgeVerdict.__name__:
+                continue
+            try:
+                recovered = JudgeVerdict.model_validate(tool_call["args"])
+            except Exception:
+                continue
+
+    return recovered
+
+
+def _judge_prompt(person: PersonPayload, suggestion: RestaurantSuggestion) -> str:
     return (
         f"You are representing {person.name} and their preferences: {person.preferences}.\n\n"
-        f"Evaluate whether the following restaurant satisfies these preferences.\n\n"
+        "Use the web_search tool to research the following restaurant before deciding.\n\n"
         f"Restaurant: {suggestion.name}\n"
         f"Address: {suggestion.address or 'unknown'}\n\n"
-        f"Research results:\n{research}\n\n"
+        "Evaluate whether the restaurant satisfies these preferences. "
         "Return 'approved' if the restaurant clearly satisfies the preferences. "
-        "Return 'rejected' with a short feedback paragraph (at most a few sentences) if it does not."
+        "Return 'rejected' with a short feedback paragraph (at most a few sentences) if it does not.\n\n"
+        "IMPORTANT: Call the web_search tool as many times as you need first (up to 3). "
+        "Only call the final verdict tool by itself, once you are done researching, and "
+        "never call it more than once or alongside another tool call."
     )

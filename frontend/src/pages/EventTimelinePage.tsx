@@ -54,18 +54,19 @@ export default function EventTimelinePage({ people, onBack, onNext }: EventTimel
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    let active = true
+    const controller = new AbortController()
     setTimeline(null)
     setError(false)
-    void fetchEventTimeline(people)
+    void fetchEventTimeline(people, controller.signal)
       .then((response) => {
-        if (active) setTimeline(response)
+        setTimeline(response)
       })
-      .catch(() => {
-        if (active) setError(true)
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        setError(true)
       })
     return () => {
-      active = false
+      controller.abort()
     }
   }, [people])
 

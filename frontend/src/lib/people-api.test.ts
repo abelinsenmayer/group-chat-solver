@@ -15,6 +15,16 @@ test('requests people from the configured API endpoint', async () => {
   expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:8000/api/people')
 })
 
+test('forwards an abort signal to the people endpoint request', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] })
+  vi.stubGlobal('fetch', fetchMock)
+  const controller = new AbortController()
+
+  await fetchPeople(controller.signal)
+
+  expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:8000/api/people', { signal: controller.signal })
+})
+
 test('posts selected people to the event timeline endpoint', async () => {
   const people: Person[] = [{
     name: 'Elena',
@@ -36,6 +46,7 @@ test('posts selected people to the event timeline endpoint', async () => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ people }),
+    signal: undefined,
   })
 })
 
@@ -55,5 +66,6 @@ test('posts selected people to the reachable areas endpoint', async () => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ people }),
+    signal: undefined,
   })
 })
