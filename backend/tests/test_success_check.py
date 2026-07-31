@@ -1,4 +1,5 @@
 from datetime import time
+from unittest.mock import patch
 
 from src.solve_restaurants.state import (
     FinalResult,
@@ -74,3 +75,70 @@ def test_success_check_exits_after_three_rounds():
     assert result["result"].suggestions == []
     assert result["round"] == 4
     assert route_after_success_check(_apply_node_result(state, result)) == "__end__"
+
+
+def test_success_check_emits_round_complete_and_final_result_on_consensus():
+    verdicts = {
+        "A": {"r1": JudgeVerdict(verdict=Verdict.APPROVED)},
+        "B": {"r1": JudgeVerdict(verdict=Verdict.APPROVED)},
+    }
+    state = _state_with_verdicts(verdicts, round_num=1)
+    state.run_id = "run-1"
+
+    emitted = []
+    with patch(
+        "src.solve_restaurants.success_check.events.emit",
+        side_effect=lambda run_id, event: emitted.append((run_id, event)),
+    ):
+        success_check(state)
+
+    assert emitted[0] == ("run-1", {"type": "round_complete", "round": 1, "accepted_ids": ["r1"]})
+    assert emitted[1] == (
+        "run-1",
+        {
+            "type": "final_result",
+            "status": "consensus",
+            "suggestions": [
+                {"id": "r1", "name": "Spot", "address": "1 Main", "coordinates": [-73.0, 40.0]}
+            ],
+        },
+    )
+
+
+def test_success_check_emits_round_complete_without_final_result_when_looping():
+    verdicts = {
+        "A": {"r1": JudgeVerdict(verdict=Verdict.REJECTED, feedback="not vegetarian")},
+        "B": {"r1": JudgeVerdict(verdict=Verdict.APPROVED)},
+    }
+    state = _state_with_verdicts(verdicts, round_num=1)
+    state.run_id = "run-1"
+
+    emitted = []
+    with patch(
+        "src.solve_restaurants.success_check.events.emit",
+        side_effect=lambda run_id, event: emitted.append((run_id, event)),
+    ):
+        success_check(state)
+
+    assert emitted == [("run-1", {"type": "round_complete", "round": 1, "accepted_ids": []})]
+
+
+def test_success_check_emits_final_result_on_no_consensus_after_three_rounds():
+    verdicts = {
+        "A": {"r1": JudgeVerdict(verdict=Verdict.REJECTED, feedback="not vegetarian")},
+        "B": {"r1": JudgeVerdict(verdict=Verdict.APPROVED)},
+    }
+    state = _state_with_verdicts(verdicts, round_num=3)
+    state.run_id = "run-1"
+
+    emitted = []
+    with patch(
+        "src.solve_restaurants.success_check.events.emit",
+        side_effect=lambda run_id, event: emitted.append((run_id, event)),
+    ):
+        success_check(state)
+
+    assert emitted == [
+        ("run-1", {"type": "round_complete", "round": 3, "accepted_ids": []}),
+        ("run-1", {"type": "final_result", "status": "no_consensus", "suggestions": []}),
+    ]

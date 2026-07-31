@@ -84,6 +84,65 @@ def test_judge_rejects_and_logs_error_on_agent_exception():
     assert "r1" in result["errors"][0]
 
 
+def test_judge_emits_evaluating_and_verdict_events():
+    person = _person()
+    suggestion = _suggestion()
+
+    mock_agent = MagicMock()
+    mock_agent.invoke.return_value = {
+        "structured_response": JudgeVerdict(
+            verdict=Verdict.REJECTED, short_reason="Too expensive!", feedback="Prices are high for this budget."
+        )
+    }
+
+    emitted = []
+    with patch(
+        "src.solve_restaurants.judge.events.emit",
+        side_effect=lambda run_id, event: emitted.append((run_id, event)),
+    ):
+        with patch("src.solve_restaurants.judge.TavilyClient"):
+            with patch("src.solve_restaurants.judge.ChatOllama"):
+                with patch("src.solve_restaurants.judge.create_agent", return_value=mock_agent):
+                    judge(
+                        {
+                            "run_id": "run-1",
+                            "person": person.model_dump(),
+                            "suggestions": [suggestion.model_dump()],
+                        }
+                    )
+
+    assert emitted[0] == ("run-1", {"type": "judge_evaluating", "person": "A", "suggestion_id": "r1"})
+    assert emitted[1] == (
+        "run-1",
+        {
+            "type": "judge_verdict",
+            "person": "A",
+            "suggestion_id": "r1",
+            "verdict": "rejected",
+            "short_reason": "Too expensive!",
+            "feedback": "Prices are high for this budget.",
+        },
+    )
+
+
+def test_judge_defaults_run_id_when_missing_from_payload():
+    person = _person()
+    suggestion = _suggestion()
+
+    mock_agent = MagicMock()
+    mock_agent.invoke.return_value = {
+        "structured_response": JudgeVerdict(verdict=Verdict.APPROVED)
+    }
+
+    with patch("src.solve_restaurants.judge.events.emit") as mock_emit:
+        with patch("src.solve_restaurants.judge.TavilyClient"):
+            with patch("src.solve_restaurants.judge.ChatOllama"):
+                with patch("src.solve_restaurants.judge.create_agent", return_value=mock_agent):
+                    judge({"person": person.model_dump(), "suggestions": [suggestion.model_dump()]})
+
+    assert mock_emit.call_args_list[0].args[0] == ""
+
+
 def test_judge_recovers_structured_response_when_agent_returns_none():
     """Regression test mirroring the planner's create_agent bug workaround: when the
     structured-output tool is called more than once alongside other tool calls, the

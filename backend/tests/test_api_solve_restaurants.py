@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
+from src.solve_restaurants import events
 from src.api import app
 
 client = TestClient(app)
@@ -28,3 +29,20 @@ def test_solve_restaurants_endpoint_returns_200_and_run_id():
 
     assert response.status_code == 200
     assert response.json() == {"run_id": "run-123", "status": "started"}
+
+
+def test_solve_restaurants_events_streams_emitted_events():
+    events.create_run("run-events-1")
+    events.emit("run-events-1", {"type": "planner_started", "round": 1})
+    events.close_run("run-events-1")
+
+    with client.stream("GET", "/api/solve-restaurants/run-events-1/events") as response:
+        assert response.status_code == 200
+        body = "".join(response.iter_text())
+
+    assert 'data: {"type": "planner_started", "round": 1}\n\n' in body
+
+
+def test_solve_restaurants_events_returns_404_for_unknown_run_id():
+    response = client.get("/api/solve-restaurants/unknown-run/events")
+    assert response.status_code == 404

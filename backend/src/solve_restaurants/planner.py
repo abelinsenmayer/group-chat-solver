@@ -10,8 +10,9 @@ from pydantic import BaseModel
 
 from src.mapping_utils import find_pois_in_polygon
 
+from . import events
 from .config import get_settings
-from .state import PersonPayload, RestaurantSuggestion, StepLog
+from .state import PersonPayload, RestaurantSuggestion, StepLog, suggestion_event_payload
 
 
 logger = logging.getLogger(__name__)
@@ -88,6 +89,7 @@ class SuggestionSelection(BaseModel):
 
 @traceable(name="planner")
 def planner(state) -> dict:
+    events.emit(state.run_id, {"type": "planner_started", "round": state.round})
     settings = get_settings()
     polygon_coords = _extract_exterior_ring(state.overlap)
     accumulated_features: list[dict] = []
@@ -158,6 +160,15 @@ def planner(state) -> dict:
         raise PlannerSelectionError("Planner LLM did not select any restaurant suggestions")
 
     logger.debug("Selected %d suggestions via tool-calling search", len(selected))
+
+    events.emit(
+        state.run_id,
+        {
+            "type": "planner_suggestions",
+            "round": state.round,
+            "suggestions": [suggestion_event_payload(s) for s in selected],
+        },
+    )
 
     log = StepLog(
         node="planner",

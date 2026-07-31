@@ -39,6 +39,7 @@ const RAW_RUNTIME_STATE =
           ["@vitejs/plugin-react", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:4.7.0"],\
           ["class-variance-authority", "npm:0.7.1"],\
           ["clsx", "npm:2.1.1"],\
+          ["framer-motion", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:12.43.0"],\
           ["group-chat-solver-frontend", "workspace:."],\
           ["jsdom", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:29.1.1"],\
           ["lucide-react", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:1.25.0"],\
@@ -2034,6 +2035,39 @@ const RAW_RUNTIME_STATE =
         "linkType": "HARD"\
       }]\
     ]],\
+    ["framer-motion", [\
+      ["npm:12.43.0", {\
+        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/framer-motion-npm-12.43.0-b47c004d75-10c0.zip/node_modules/framer-motion/",\
+        "packageDependencies": [\
+          ["framer-motion", "npm:12.43.0"]\
+        ],\
+        "linkType": "SOFT"\
+      }],\
+      ["virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:12.43.0", {\
+        "packageLocation": "./.yarn/__virtual__/framer-motion-virtual-e42b64b695/4/AppData/Local/Yarn/Berry/cache/framer-motion-npm-12.43.0-b47c004d75-10c0.zip/node_modules/framer-motion/",\
+        "packageDependencies": [\
+          ["@emotion/is-prop-valid", null],\
+          ["@types/emotion__is-prop-valid", null],\
+          ["@types/react", "npm:18.3.31"],\
+          ["@types/react-dom", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:18.3.7"],\
+          ["framer-motion", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:12.43.0"],\
+          ["motion-dom", "npm:12.43.0"],\
+          ["motion-utils", "npm:12.39.0"],\
+          ["react", "npm:18.3.1"],\
+          ["react-dom", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:18.3.1"],\
+          ["tslib", "npm:2.8.1"]\
+        ],\
+        "packagePeers": [\
+          "@emotion/is-prop-valid",\
+          "@types/emotion__is-prop-valid",\
+          "@types/react-dom",\
+          "@types/react",\
+          "react-dom",\
+          "react"\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
     ["fsevents", [\
       ["patch:fsevents@npm%3A2.3.3#optional!builtin<compat/fsevents>::version=2.3.3&hash=df0bf1", {\
         "packageLocation": "./.yarn/unplugged/fsevents-patch-6b67494872/node_modules/fsevents/",\
@@ -2077,6 +2111,7 @@ const RAW_RUNTIME_STATE =
           ["@vitejs/plugin-react", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:4.7.0"],\
           ["class-variance-authority", "npm:0.7.1"],\
           ["clsx", "npm:2.1.1"],\
+          ["framer-motion", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:12.43.0"],\
           ["group-chat-solver-frontend", "workspace:."],\
           ["jsdom", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:29.1.1"],\
           ["lucide-react", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:1.25.0"],\
@@ -2438,6 +2473,25 @@ const RAW_RUNTIME_STATE =
         "packageDependencies": [\
           ["minipass", "npm:7.1.3"],\
           ["minizlib", "npm:3.1.0"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["motion-dom", [\
+      ["npm:12.43.0", {\
+        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/motion-dom-npm-12.43.0-5ed81b11fa-10c0.zip/node_modules/motion-dom/",\
+        "packageDependencies": [\
+          ["motion-dom", "npm:12.43.0"],\
+          ["motion-utils", "npm:12.39.0"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["motion-utils", [\
+      ["npm:12.39.0", {\
+        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/motion-utils-npm-12.39.0-59d768d874-10c0.zip/node_modules/motion-utils/",\
+        "packageDependencies": [\
+          ["motion-utils", "npm:12.39.0"]\
         ],\
         "linkType": "HARD"\
       }]\

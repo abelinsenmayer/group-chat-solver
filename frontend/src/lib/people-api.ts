@@ -46,6 +46,29 @@ export type SolveRestaurantsResponse = {
   status: string
 }
 
+export type RestaurantSuggestion = {
+  id: string
+  name: string
+  address: string | null
+  coordinates: [number, number]
+}
+
+export type SolveRestaurantsEvent =
+  | { type: 'planner_started'; round: number }
+  | { type: 'planner_suggestions'; round: number; suggestions: RestaurantSuggestion[] }
+  | { type: 'judge_evaluating'; person: string; suggestion_id: string }
+  | {
+      type: 'judge_verdict'
+      person: string
+      suggestion_id: string
+      verdict: 'approved' | 'rejected'
+      short_reason: string | null
+      feedback: string | null
+    }
+  | { type: 'round_complete'; round: number; accepted_ids: string[] }
+  | { type: 'final_result'; status: 'consensus' | 'no_consensus'; suggestions: RestaurantSuggestion[] }
+  | { type: 'error'; message: string }
+
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
 
 export async function fetchPeople(signal?: AbortSignal): Promise<Person[]> {
@@ -111,4 +134,15 @@ export async function fetchSolveRestaurants(
   }
 
   return response.json() as Promise<SolveRestaurantsResponse>
+}
+
+export function subscribeSolveRestaurantsEvents(
+  runId: string,
+  onEvent: (event: SolveRestaurantsEvent) => void,
+): () => void {
+  const source = new EventSource(`${apiBaseUrl}/api/solve-restaurants/${runId}/events`)
+  source.onmessage = (message) => {
+    onEvent(JSON.parse(message.data) as SolveRestaurantsEvent)
+  }
+  return () => source.close()
 }

@@ -236,6 +236,60 @@ def test_planner_recovers_structured_response_when_agent_returns_none():
     assert result["suggestions"][0].id == "mapbox_id_1"
 
 
+def test_planner_emits_started_and_suggestions_events():
+    people = [person_to_payload(Person("A", (time(17), time(20)), (40.0, -73.0), "vegetarian"))]
+    overlap = {
+        "type": "Polygon",
+        "coordinates": [[[-74, 40], [-72, 40], [-72, 41], [-74, 41], [-74, 40]]],
+    }
+    state = SolveRestaurantsState(people=people, overlap=overlap, run_id="run-1", round=2)
+
+    raw_features = [
+        {
+            "properties": {
+                "mapbox_id": "r0",
+                "name": "Restaurant 0",
+                "address": "0 Main St",
+                "coordinates": {"longitude": -73.0, "latitude": 40.0},
+            }
+        }
+    ]
+    selected_from_llm = [
+        SelectedSuggestion(id="r0", name="Restaurant 0", address="0 Main St", coordinates=(-73.0, 40.0))
+    ]
+
+    mock_agent = MagicMock()
+    mock_agent.invoke.return_value = {
+        "structured_response": SuggestionSelection(selected=selected_from_llm)
+    }
+
+    def fake_create_agent(*, tools, **kwargs):
+        tools[0].invoke({"query": "vegetarian"})
+        return mock_agent
+
+    emitted = []
+    with patch(
+        "src.solve_restaurants.planner.events.emit",
+        side_effect=lambda run_id, event: emitted.append((run_id, event)),
+    ):
+        with patch("src.solve_restaurants.planner.find_pois_in_polygon", return_value=raw_features):
+            with patch("src.solve_restaurants.planner.ChatOllama"):
+                with patch("src.solve_restaurants.planner.create_agent", side_effect=fake_create_agent):
+                    planner(state)
+
+    assert emitted[0] == ("run-1", {"type": "planner_started", "round": 2})
+    assert emitted[1] == (
+        "run-1",
+        {
+            "type": "planner_suggestions",
+            "round": 2,
+            "suggestions": [
+                {"id": "r0", "name": "Restaurant 0", "address": "0 Main St", "coordinates": [-73.0, 40.0]}
+            ],
+        },
+    )
+
+
 def test_planner_raises_when_no_suggestions_selected():
     people = [person_to_payload(Person("A", (time(17), time(20)), (40.0, -73.0), "vegetarian"))]
     overlap = {

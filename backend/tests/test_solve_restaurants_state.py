@@ -7,6 +7,7 @@ from src.solve_restaurants.state import (
     SolveRestaurantsState,
     Verdict,
     person_to_payload,
+    suggestion_event_payload,
 )
 from src.person import Person
 
@@ -50,3 +51,30 @@ def test_judge_verdict_rejected_requires_feedback():
     verdict = JudgeVerdict(verdict=Verdict.REJECTED, feedback="too expensive")
     assert verdict.verdict == "rejected"
     assert verdict.feedback == "too expensive"
+
+
+def test_solve_restaurants_state_defaults_run_id_to_empty_string():
+    state = SolveRestaurantsState(people=[], overlap={"type": "Polygon", "coordinates": []})
+    assert state.run_id == ""
+
+
+def test_judge_verdict_defaults_short_reason_to_none():
+    verdict = JudgeVerdict(verdict=Verdict.APPROVED)
+    assert verdict.short_reason is None
+
+
+def test_suggestion_event_payload_omits_mapbox_feature():
+    suggestion = RestaurantSuggestion(
+        id="r1",
+        name="Sushi Spot",
+        address="123 Main St",
+        coordinates=(-73.0, 40.0),
+        mapbox_feature={"type": "Feature", "huge": "blob"},
+    )
+    payload = suggestion_event_payload(suggestion)
+    assert payload == {
+        "id": "r1",
+        "name": "Sushi Spot",
+        "address": "123 Main St",
+        "coordinates": [-73.0, 40.0],
+    }

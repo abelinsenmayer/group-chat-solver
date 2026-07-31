@@ -1,12 +1,16 @@
+import asyncio
 import importlib.util
+import json
 from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from src.logging_config import configure_logging
 from src.person_json import person_from_json, person_to_json
+from src.solve_restaurants import events
 from src.solve_restaurants.config import configure_langsmith_tracing
 from src.solve_restaurants.graph import start_solve_restaurants
 from src.solver import solve_event_timeline, solve_reachable_areas
@@ -80,6 +84,26 @@ async def solve_restaurants(request: SolveRestaurantsRequest) -> dict[str, objec
     people = people_from_request(request.people)
     run_id, _ = start_solve_restaurants(people, request.overlap)
     return {"run_id": run_id, "status": "started"}
+
+
+@app.get("/api/solve-restaurants/{run_id}/events")
+async def stream_solve_restaurants_events(run_id: str) -> StreamingResponse:
+    try:
+        run_queue = events.subscribe(run_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="Unknown run_id") from error
+
+    async def event_stream():
+        try:
+            while True:
+                item = await asyncio.to_thread(run_queue.get)
+                if item is events.SENTINEL:
+                    break
+                yield f"data: {json.dumps(item)}\n\n"
+        finally:
+            events.discard(run_id)
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 @app.get("/api/people")

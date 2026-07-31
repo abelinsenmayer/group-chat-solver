@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
-from .state import FinalResult, StepLog, SolveRestaurantsState
+from . import events
+from .state import FinalResult, StepLog, SolveRestaurantsState, suggestion_event_payload
 
 
 def success_check(state: SolveRestaurantsState) -> dict:
@@ -30,6 +31,18 @@ def success_check(state: SolveRestaurantsState) -> dict:
             state_snapshot={"accepted_ids": [s.id for s in accepted], "round": state.round},
             notes=[f"Consensus reached on {len(accepted)} suggestion(s)"],
         )
+        events.emit(
+            state.run_id,
+            {"type": "round_complete", "round": state.round, "accepted_ids": [s.id for s in accepted]},
+        )
+        events.emit(
+            state.run_id,
+            {
+                "type": "final_result",
+                "status": "consensus",
+                "suggestions": [suggestion_event_payload(s) for s in accepted],
+            },
+        )
         return {"result": result, "logs": [log]}
 
     new_round = state.round + 1
@@ -54,6 +67,9 @@ def success_check(state: SolveRestaurantsState) -> dict:
             else "No consensus after 3 rounds."
         ],
     )
+    events.emit(state.run_id, {"type": "round_complete", "round": state.round, "accepted_ids": []})
+    if result is not None:
+        events.emit(state.run_id, {"type": "final_result", "status": "no_consensus", "suggestions": []})
     return {
         "result": result,
         "round": new_round,

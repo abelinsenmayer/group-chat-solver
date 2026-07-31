@@ -8,6 +8,7 @@ from langchain_ollama import ChatOllama
 from langsmith import traceable
 from tavily import TavilyClient
 
+from . import events
 from .config import get_settings
 from .state import JudgeVerdict, PersonPayload, RestaurantSuggestion, StepLog, Verdict
 
@@ -40,6 +41,7 @@ def _create_web_search_tool(client: TavilyClient):
 
 @traceable(name="judge")
 def judge(payload: dict) -> dict:
+    run_id = payload.get("run_id", "")
     person = PersonPayload.model_validate(payload["person"])
     suggestions = [RestaurantSuggestion.model_validate(s) for s in payload["suggestions"]]
     settings = get_settings()
@@ -55,6 +57,7 @@ def judge(payload: dict) -> dict:
     notes = []
     errors = []
     for suggestion in suggestions:
+        events.emit(run_id, {"type": "judge_evaluating", "person": person.name, "suggestion_id": suggestion.id})
         agent = create_agent(
             model=llm,
             tools=[web_search_tool],
@@ -81,10 +84,25 @@ def judge(payload: dict) -> dict:
             if verdict is None:
                 raise ValueError("Judge LLM did not return a usable structured response")
         except Exception as error:
-            verdict = JudgeVerdict(verdict=Verdict.REJECTED, feedback=f"unable to verify: {error}")
+            verdict = JudgeVerdict(
+                verdict=Verdict.REJECTED,
+                short_reason="Unable to verify",
+                feedback=f"unable to verify: {error}",
+            )
             errors.append(f"Judge for {person.name} failed on {suggestion.id}: {error}")
         verdicts[suggestion.id] = verdict
         notes.append(f"{person.name} -> {suggestion.name}: {verdict.verdict.value}")
+        events.emit(
+            run_id,
+            {
+                "type": "judge_verdict",
+                "person": person.name,
+                "suggestion_id": suggestion.id,
+                "verdict": verdict.verdict.value,
+                "short_reason": verdict.short_reason,
+                "feedback": verdict.feedback,
+            },
+        )
 
     log = StepLog(
         node="judge",
@@ -131,8 +149,13 @@ def _judge_prompt(person: PersonPayload, suggestion: RestaurantSuggestion) -> st
         f"Restaurant: {suggestion.name}\n"
         f"Address: {suggestion.address or 'unknown'}\n\n"
         "Evaluate whether the restaurant satisfies these preferences. "
-        "Return 'approved' if the restaurant clearly satisfies the preferences. "
-        "Return 'rejected' with a short feedback paragraph (at most a few sentences) if it does not.\n\n"
+        "Return 'approved' if the restaurant clearly satisfies the preferences, leaving "
+        "short_reason and feedback empty. "
+        "Return 'rejected' if it does not, and also provide:\n"
+        "- short_reason: a short punchy tag of at most 5 words (e.g. 'Too expensive!', "
+        "'No vegetarian options') summarizing why it was rejected.\n"
+        "- feedback: a short feedback paragraph (at most a few sentences) explaining the "
+        "rejection in more detail.\n\n"
         "IMPORTANT: Call the web_search tool as many times as you need first (up to 3). "
         "Only call the final verdict tool by itself, once you are done researching, and "
         "never call it more than once or alongside another tool call."

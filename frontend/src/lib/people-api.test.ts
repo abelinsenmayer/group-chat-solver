@@ -1,5 +1,5 @@
 import { expect, test, vi } from 'vitest'
-import { fetchEventTimeline, fetchPeople, fetchReachableAreas, type Person } from './people-api'
+import { fetchEventTimeline, fetchPeople, fetchReachableAreas, subscribeSolveRestaurantsEvents, type Person, type SolveRestaurantsEvent } from './people-api'
 
 test('requests people from the configured API endpoint', async () => {
   const people = [{
@@ -68,4 +68,50 @@ test('posts selected people to the reachable areas endpoint', async () => {
     body: JSON.stringify({ people }),
     signal: undefined,
   })
+})
+
+class FakeEventSource {
+  static instances: FakeEventSource[] = []
+  onmessage: ((event: { data: string }) => void) | null = null
+  closed = false
+  constructor(public url: string) {
+    FakeEventSource.instances.push(this)
+  }
+  close() {
+    this.closed = true
+  }
+  emit(event: SolveRestaurantsEvent) {
+    this.onmessage?.({ data: JSON.stringify(event) })
+  }
+}
+
+test('opens an EventSource pointed at the run events endpoint', () => {
+  FakeEventSource.instances = []
+  vi.stubGlobal('EventSource', FakeEventSource)
+
+  subscribeSolveRestaurantsEvents('run-1', vi.fn())
+
+  expect(FakeEventSource.instances).toHaveLength(1)
+  expect(FakeEventSource.instances[0].url).toBe('http://127.0.0.1:8000/api/solve-restaurants/run-1/events')
+})
+
+test('forwards parsed events to the onEvent callback', () => {
+  FakeEventSource.instances = []
+  vi.stubGlobal('EventSource', FakeEventSource)
+  const onEvent = vi.fn()
+
+  subscribeSolveRestaurantsEvents('run-1', onEvent)
+  FakeEventSource.instances[0].emit({ type: 'planner_started', round: 1 })
+
+  expect(onEvent).toHaveBeenCalledWith({ type: 'planner_started', round: 1 })
+})
+
+test('closes the EventSource when the returned unsubscribe function is called', () => {
+  FakeEventSource.instances = []
+  vi.stubGlobal('EventSource', FakeEventSource)
+
+  const unsubscribe = subscribeSolveRestaurantsEvents('run-1', vi.fn())
+  unsubscribe()
+
+  expect(FakeEventSource.instances[0].closed).toBe(true)
 })

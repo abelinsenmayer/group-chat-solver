@@ -2,6 +2,7 @@ import asyncio
 from datetime import time
 from unittest.mock import patch
 
+from src.solve_restaurants import events
 from src.solve_restaurants.graph import run_solve_restaurants
 from src.solve_restaurants.state import JudgeVerdict, RestaurantSuggestion, Verdict
 from src.person import Person
@@ -43,7 +44,9 @@ def test_full_graph_reaches_consensus_on_first_round():
                 "logs": [],
             }
             with patch("src.solve_restaurants.graph.run_logger.save_run"):
-                final_state = asyncio.run(run_solve_restaurants(people, overlap))
+                events.create_run("run-1")
+                final_state = asyncio.run(run_solve_restaurants(people, overlap, "run-1"))
+                events.discard("run-1")
 
     assert final_state.result is not None
     assert final_state.result.status == "consensus"
@@ -69,7 +72,9 @@ def test_full_graph_exits_with_no_consensus_after_three_rounds():
                 "logs": [],
             }
             with patch("src.solve_restaurants.graph.run_logger.save_run"):
-                final_state = asyncio.run(run_solve_restaurants(people, overlap))
+                events.create_run("run-2")
+                final_state = asyncio.run(run_solve_restaurants(people, overlap, "run-2"))
+                events.discard("run-2")
 
     assert final_state.result is not None
     assert final_state.result.status == "no_consensus"
