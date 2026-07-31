@@ -135,3 +135,28 @@ test('explains a valid no-overlap response', async () => {
 
   expect(await screen.findByText('No common reachable area for every selected person.')).toBeInTheDocument()
 })
+
+test('does not refetch when an initial result is provided', async () => {
+  const cachedResult: ReachableAreaResponse = {
+    status: 'ok',
+    optimal_start_time: '18:00',
+    people: [{ person: elena, travel_time_minutes: 30, area }],
+    overlap: area,
+  }
+
+  vi.mocked(fetchReachableAreas).mockClear()
+  vi.mocked(fetchReachableAreas).mockRejectedValue(new Error('should not be called'))
+
+  render(
+    <ReachableAreaMapPage
+      people={[elena]}
+      timeline={timeline}
+      initialResult={cachedResult}
+      onBack={vi.fn()}
+      onNext={vi.fn()}
+    />,
+  )
+
+  expect(screen.getByText('Travel time: 30 min')).toBeInTheDocument()
+  await waitFor(() => expect(fetchReachableAreas).not.toHaveBeenCalled())
+})

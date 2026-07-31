@@ -4,12 +4,14 @@ import { fetchPeople, type Person } from '../lib/people-api'
 
 type PersonPickerPageProps = {
   onNext: (people: Person[]) => void
+  initialPeople?: Person[]
+  onPeopleLoaded?: (people: Person[]) => void
 }
 
-export default function PersonPickerPage({ onNext }: PersonPickerPageProps) {
-  const [people, setPeople] = useState<Person[]>([])
+export default function PersonPickerPage({ onNext, initialPeople, onPeopleLoaded }: PersonPickerPageProps) {
+  const [people, setPeople] = useState<Person[]>(initialPeople ?? [])
   const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set())
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(initialPeople === undefined)
   const [error, setError] = useState(false)
 
   const loadPeople = useCallback(async (signal?: AbortSignal) => {
@@ -17,20 +19,23 @@ export default function PersonPickerPage({ onNext }: PersonPickerPageProps) {
     setError(false)
 
     try {
-      setPeople(await fetchPeople(signal))
+      const fetched = await fetchPeople(signal)
+      setPeople(fetched)
+      onPeopleLoaded?.(fetched)
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
       setError(true)
     } finally {
       if (!signal?.aborted) setLoading(false)
     }
-  }, [])
+  }, [onPeopleLoaded])
 
   useEffect(() => {
+    if (initialPeople !== undefined) return
     const controller = new AbortController()
     void loadPeople(controller.signal)
     return () => controller.abort()
-  }, [loadPeople])
+  }, [loadPeople, initialPeople])
 
   const togglePerson = (name: string) => {
     setSelectedNames((current) => {

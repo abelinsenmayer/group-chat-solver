@@ -11,6 +11,8 @@ type ReachableAreaMapPageProps = {
   timeline: EventTimelineResponse
   onBack: () => void
   onNext: (overlap: GeoJsonGeometry) => void
+  initialResult?: ReachableAreaResponse | null
+  onResultLoaded?: (result: ReachableAreaResponse) => void
 }
 
 function featureCollection(geometry: GeoJsonGeometry) {
@@ -69,15 +71,16 @@ function createPersonMarkerElement(name: string, color: string): HTMLElement {
   return wrapper
 }
 
-export default function ReachableAreaMapPage({ people, timeline, onBack, onNext }: ReachableAreaMapPageProps) {
+export default function ReachableAreaMapPage({ people, timeline, onBack, onNext, initialResult = null, onResultLoaded }: ReachableAreaMapPageProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [result, setResult] = useState<ReachableAreaResponse | null>(null)
+  const [result, setResult] = useState<ReachableAreaResponse | null>(initialResult)
   const [error, setError] = useState(false)
   const accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
 
   useEffect(() => {
+    if (result) return
     const controller = new AbortController()
     setResult(null)
     setError(false)
@@ -85,6 +88,7 @@ export default function ReachableAreaMapPage({ people, timeline, onBack, onNext 
     void fetchReachableAreas(people, timeline.optimal_start_time ?? undefined, controller.signal)
       .then((response) => {
         setResult(response)
+        onResultLoaded?.(response)
       })
       .catch((err) => {
         if (err instanceof DOMException && err.name === 'AbortError') return
@@ -94,7 +98,7 @@ export default function ReachableAreaMapPage({ people, timeline, onBack, onNext 
     return () => {
       controller.abort()
     }
-  }, [people, timeline.optimal_start_time])
+  }, [people, timeline.optimal_start_time, result, onResultLoaded])
 
   useEffect(() => {
     if (!accessToken || !mapContainer.current || map.current || !result) return

@@ -7,6 +7,7 @@ type EventTimelinePageProps = {
   people: Person[]
   onBack: () => void
   onNext: (timeline: EventTimelineResponse) => void
+  initialTimeline?: EventTimelineResponse | null
 }
 
 type TimelineRangeProps = {
@@ -49,11 +50,12 @@ function TimelineRange({ start, end, domainStart, domainEnd, color, label }: Tim
   )
 }
 
-export default function EventTimelinePage({ people, onBack, onNext }: EventTimelinePageProps) {
-  const [timeline, setTimeline] = useState<EventTimelineResponse | null>(null)
+export default function EventTimelinePage({ people, onBack, onNext, initialTimeline = null }: EventTimelinePageProps) {
+  const [timeline, setTimeline] = useState<EventTimelineResponse | null>(initialTimeline)
   const [error, setError] = useState(false)
 
   useEffect(() => {
+    if (timeline) return
     const controller = new AbortController()
     setTimeline(null)
     setError(false)
@@ -68,7 +70,7 @@ export default function EventTimelinePage({ people, onBack, onNext }: EventTimel
     return () => {
       controller.abort()
     }
-  }, [people])
+  }, [people, timeline])
 
   const domain = useMemo(() => {
     const times = people.flatMap((person) => [toMinutes(person.availability.start), toMinutes(person.availability.end)])

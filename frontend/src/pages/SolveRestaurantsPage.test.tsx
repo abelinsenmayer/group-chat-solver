@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { expect, test, vi } from 'vitest'
 import { fetchSolveRestaurants, type Person } from '../lib/people-api'
 import SolveRestaurantsPage from './SolveRestaurantsPage'
@@ -42,4 +42,21 @@ test('shows an error message when the solver fails to start', async () => {
   render(<SolveRestaurantsPage people={[elena]} overlap={overlap} onBack={vi.fn()} />)
 
   expect(await screen.findByText('Unable to start the restaurant solver.')).toBeInTheDocument()
+})
+
+test('does not refetch when an initial status is provided', async () => {
+  vi.mocked(fetchSolveRestaurants).mockClear()
+  vi.mocked(fetchSolveRestaurants).mockRejectedValue(new Error('should not be called'))
+
+  render(
+    <SolveRestaurantsPage
+      people={[elena]}
+      overlap={overlap}
+      initialStatus={{ run_id: 'run-1', status: 'started' }}
+      onBack={vi.fn()}
+    />,
+  )
+
+  expect(screen.getByText('The restaurant solver has started successfully.')).toBeInTheDocument()
+  await waitFor(() => expect(fetchSolveRestaurants).not.toHaveBeenCalled())
 })

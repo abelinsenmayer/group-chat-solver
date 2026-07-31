@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { expect, test, vi } from 'vitest'
 import { fetchEventTimeline, type Person } from '../lib/people-api'
 import EventTimelinePage from './EventTimelinePage'
@@ -44,4 +44,28 @@ test('explains unavailable schedules and disables Next', async () => {
 
   expect(await screen.findByText('No time works for every selected person.')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /next/i })).toBeDisabled()
+})
+
+test('does not refetch when an initial timeline is provided', async () => {
+  const cachedTimeline = {
+    status: 'ok' as const,
+    common_window: { start: '17:30', end: '20:00' },
+    optimal_start_time: '18:00',
+    optimal_end_time: '19:00',
+  }
+
+  vi.mocked(fetchEventTimeline).mockClear()
+  vi.mocked(fetchEventTimeline).mockRejectedValue(new Error('should not be called'))
+
+  render(
+    <EventTimelinePage
+      people={[elena]}
+      initialTimeline={cachedTimeline}
+      onBack={vi.fn()}
+      onNext={vi.fn()}
+    />,
+  )
+
+  expect(screen.getByText('6:00 PM–7:00 PM')).toBeInTheDocument()
+  await waitFor(() => expect(fetchEventTimeline).not.toHaveBeenCalled())
 })

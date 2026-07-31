@@ -1,22 +1,26 @@
 import { useEffect, useState } from 'react'
-import { fetchSolveRestaurants, type GeoJsonGeometry, type Person } from '../lib/people-api'
+import { fetchSolveRestaurants, type GeoJsonGeometry, type Person, type SolveRestaurantsResponse } from '../lib/people-api'
 
 type SolveRestaurantsPageProps = {
   people: Person[]
   overlap: GeoJsonGeometry
   onBack: () => void
+  initialStatus?: SolveRestaurantsResponse | null
+  onStatusLoaded?: (status: SolveRestaurantsResponse) => void
 }
 
-export default function SolveRestaurantsPage({ people, overlap, onBack }: SolveRestaurantsPageProps) {
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+export default function SolveRestaurantsPage({ people, overlap, onBack, initialStatus = null, onStatusLoaded }: SolveRestaurantsPageProps) {
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>(initialStatus ? 'success' : 'loading')
 
   useEffect(() => {
+    if (initialStatus) return
     const controller = new AbortController()
     setStatus('loading')
 
     void fetchSolveRestaurants(people, overlap, controller.signal)
-      .then(() => {
+      .then((response) => {
         setStatus('success')
+        onStatusLoaded?.(response)
       })
       .catch((err) => {
         if (err instanceof DOMException && err.name === 'AbortError') return
@@ -26,7 +30,7 @@ export default function SolveRestaurantsPage({ people, overlap, onBack }: SolveR
     return () => {
       controller.abort()
     }
-  }, [people, overlap])
+  }, [people, overlap, initialStatus, onStatusLoaded])
 
   return (
     <main className="mx-auto min-h-screen max-w-3xl bg-background px-6 py-10 text-secondary sm:px-12 sm:py-16">

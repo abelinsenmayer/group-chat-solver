@@ -73,3 +73,50 @@ test('shows the event timeline after selecting a person', async () => {
 
   expect(await screen.findByRole('heading', { name: /event timeline optimizer/i })).toBeInTheDocument()
 })
+
+test('does not refetch the timeline when navigating back from the map', async () => {
+  const user = userEvent.setup()
+  let eventTimelineCalls = 0
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+    if (url.includes('/api/people')) {
+      return Promise.resolve({ ok: true, json: async () => [elena] })
+    }
+    if (url.includes('/api/event-timeline')) {
+      eventTimelineCalls++
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          status: 'ok',
+          common_window: { start: '17:30', end: '20:00' },
+          optimal_start_time: '18:00',
+          optimal_end_time: '19:00',
+        }),
+      })
+    }
+    if (url.includes('/api/reachable-areas')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          status: 'ok',
+          optimal_start_time: '18:00',
+          people: [],
+          overlap: null,
+        }),
+      })
+    }
+    return Promise.resolve({ ok: false, json: async () => [] })
+  }))
+
+  render(<App />)
+
+  await user.click(await screen.findByRole('button', { name: /elena/i }))
+  await user.click(screen.getByRole('button', { name: /next/i }))
+  await screen.findByRole('heading', { name: /event timeline optimizer/i })
+  await user.click(screen.getByRole('button', { name: /next/i }))
+  await screen.findByRole('heading', { name: /reachable area map/i })
+
+  await user.click(screen.getByRole('button', { name: /back/i }))
+  await screen.findByRole('heading', { name: /event timeline optimizer/i })
+
+  expect(eventTimelineCalls).toBe(1)
+})
