@@ -46,7 +46,7 @@ export default function MeetTheAgentsPage({ people, onBack, onNext }: MeetTheAge
         <div className="mt-6 space-y-8">
           <AgentCard
             icon={<CircleUserRound size={48} strokeWidth={1.5} color={orchestratorColor} />}
-            name="The Planner"
+            name="Planner"
             description="Here's a description of what the orchestrator agent does. It coordinates the judges and synthesizes their evaluations into a final plan."
             nameColor={orchestratorColor}
             delay={150}

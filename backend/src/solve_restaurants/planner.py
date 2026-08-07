@@ -116,7 +116,7 @@ def planner(state) -> dict:
                 }
             ]
         },
-        config={"recursion_limit": 12},
+        config={"recursion_limit": 24},
     )
     logger.debug("Planner result: %s", result)
     selection = result.get("structured_response") or _recover_structured_response(
@@ -246,4 +246,6 @@ def _planner_system_prompt(people: list[PersonPayload], feedback_summary: str) -
         "IMPORTANT: Call the search_restaurants tool as many times as you need first. "
         "Only call the final selection tool by itself, once you are done searching, and "
         "never call it more than once or alongside another tool call."
+        "You can only call tools a limited number of times. If you exhaust your allotted tool calls, make your recommendations "
+        "based on the best options you have found so far."
     )

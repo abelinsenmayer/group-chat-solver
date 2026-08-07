@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     log_dir: str = os.path.join(os.path.dirname(__file__), "..", "..", "logs", "runs")
     dev_mode: bool = True
     log_level: str = "DEBUG"
-    langsmith_tracing: bool = True
+    langsmith_tracing: bool = False
     langsmith_api_key: str | None = None
     langsmith_project: str = "group-chat-solver"
     langsmith_endpoint: str | None = None
