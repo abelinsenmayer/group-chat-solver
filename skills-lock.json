@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "skills": {
+    "aws-cdk": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/core-skills/aws-cdk/SKILL.md",
+      "computedHash": "1954fe48c970aa84b4306df7fa9669228cf5dacfaf877e2d89f9c4c562693f57"
+    },
+    "aws-cloudformation": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/core-skills/aws-cloudformation/SKILL.md",
+      "computedHash": "0aaee4cdc43743552d817a4be5f2225c1e127ef49048e9dd2444b66e79eda8bd"
+    },
+    "aws-deployment": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/core-skills/aws-deployment/SKILL.md",
+      "computedHash": "615b03e22a690405c0478193352425659b0187b127e27c6de964639734d8a512"
+    },
+    "aws-iam": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/core-skills/aws-iam/SKILL.md",
+      "computedHash": "56e5447a5ba3e83cd2b8d1034f0d815cec96a48969e59e54201d5d112e7299c9"
+    },
+    "aws-networking": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/core-skills/aws-networking/SKILL.md",
+      "computedHash": "e8bcd4d2f06456d99295385db9e90bee3574047af7c2de65ce259131ddd8ef27"
+    },
+    "aws-sdk-python-usage": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/core-skills/aws-sdk-python-usage/SKILL.md",
+      "computedHash": "4d5e328c6539ec7a48815db51c84febd9749817a10119d5e12f6aaddb32c7a1f"
+    },
+    "aws-security": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/core-skills/aws-security/SKILL.md",
+      "computedHash": "94a51d95d28a86b866db615510a74ee32e0543d07be7361b1c34f6b454f673f8"
+    },
+    "aws-serverless": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/core-skills/aws-serverless/SKILL.md",
+      "computedHash": "48db0d87134fad20f34bf53959a324c5ca28c0dfbfdd073765e6d818240f5292"
+    },
+    "cloudfront": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/specialized-skills/networking-and-content-delivery-skills/cloudfront/SKILL.md",
+      "computedHash": "a5958f14ee74639fa28952e67f2baa49ddebc299a7fa679cd3de0df1f1b6fab6"
+    },
+    "connecting-lambda-to-api-gateway": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/specialized-skills/serverless-skills/connecting-lambda-to-api-gateway/SKILL.md",
+      "computedHash": "4eee887224e470a9090f3fa8b4c47490b77e64887bcadb48c0a86bc8370a4d01"
+    },
+    "creating-api-gateway-stage": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/specialized-skills/serverless-skills/creating-api-gateway-stage/SKILL.md",
+      "computedHash": "f41894136d12386283d2ea65dbbae7a1f860c1033c2d00c4772a902d543d8491"
+    },
+    "route53": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/specialized-skills/networking-and-content-delivery-skills/route53/SKILL.md",
+      "computedHash": "7195f9435b333ef69600d007615a9ce438514fc2b14367da759fcfec6de3f7c9"
+    },
+    "waf": {
+      "source": "aws/agent-toolkit-for-aws",
+      "sourceType": "github",
+      "skillPath": "skills/specialized-skills/networking-and-content-delivery-skills/waf/SKILL.md",
+      "computedHash": "9bf8db207a7c4a521999f20fbbec19649c248e8cf514110895c2c208f2284a6d"
+    }
+  }
+}
