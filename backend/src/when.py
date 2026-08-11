@@ -34,8 +34,9 @@ def find_common_window(persons: list[Person]) -> tuple[tuple[time, time] | None,
     """Return the longest availability window shared by the most people.
 
     The returned window is at least ``MIN_WINDOW_DURATION`` long and must
-    include at least two people. If no such window exists, ``None`` is returned
-    along with the full input list as excluded.
+    include at least two people, unless only one person was given, in which
+    case their own availability is used as the window. If no such window
+    exists, ``None`` is returned along with the full input list as excluded.
 
     Args:
         persons: A list of people with availability intervals.
@@ -91,7 +92,8 @@ def find_common_window(persons: list[Person]) -> tuple[tuple[time, time] | None,
             best_end = min_end
             best_active = active_persons
 
-    if best_count < 2:
+    min_required_count = 1 if len(persons) == 1 else 2
+    if best_count < min_required_count:
         return None, list(persons)
 
     window = (_microseconds_to_time(best_start), _microseconds_to_time(best_end))

@@ -109,6 +109,20 @@ def test_longer_pair_preferred_over_shorter_pair() -> None:
     assert excluded == [persons[0]]
 
 
+def test_single_person_with_long_enough_availability_returns_own_window() -> None:
+    persons = [_person("A", 10, 14)]
+    window, excluded = find_common_window(persons)
+    assert window == (time(10), time(14))
+    assert excluded == []
+
+
+def test_single_person_without_long_enough_availability_returns_none() -> None:
+    persons = [_person("A", 10, time(10, 30))]
+    window, excluded = find_common_window(persons)
+    assert window is None
+    assert excluded == persons
+
+
 def test_find_ideal_start_time_maximizes_reachable_area(monkeypatch) -> None:
     def area(_people: list[Person], start_time: time) -> float:
         offset_seconds = (

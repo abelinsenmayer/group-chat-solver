@@ -32,6 +32,21 @@ test('renders the optimized event and person availability timelines', async () =
   expect(screen.getByRole('button', { name: /next/i })).toBeEnabled()
 })
 
+test('uses singular copy when only one person is in the simulation', async () => {
+  vi.mocked(fetchEventTimeline).mockResolvedValue({
+    status: 'ok',
+    common_window: { start: '17:30', end: '20:00' },
+    optimal_start_time: '18:00',
+    optimal_end_time: '19:00',
+  })
+
+  render(<EventTimelinePage people={[elena]} onBack={vi.fn()} onNext={vi.fn()} />)
+
+  expect(
+    await screen.findByText("We found the event time that gives you the most time to reach a place you'll enjoy."),
+  ).toBeInTheDocument()
+})
+
 test('explains unavailable schedules and disables Next', async () => {
   vi.mocked(fetchEventTimeline).mockResolvedValue({
     status: 'no_common_availability',

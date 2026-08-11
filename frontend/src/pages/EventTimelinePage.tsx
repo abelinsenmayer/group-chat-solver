@@ -84,7 +84,7 @@ export default function EventTimelinePage({ people, onBack, onNext, initialTimel
       <header className="max-w-3xl">
         <p className="text-sm">Plan the group&apos;s</p>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Event Timeline Optimizer</h1>
-        <p className="mt-6 text-base">We found the event time that gives everyone the most time to reach a place you can all enjoy.</p>
+        <p className="mt-6 text-base">We found the event time that gives everyone the most time to reach a place they can enjoy.</p>
       </header>
 
       <section className="mt-14" aria-live="polite">
