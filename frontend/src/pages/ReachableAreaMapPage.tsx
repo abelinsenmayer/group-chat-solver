@@ -3,6 +3,7 @@ import { renderToString } from 'react-dom/server'
 import { CircleUserRound } from 'lucide-react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import WhatsHappeningHere from '../components/WhatsHappeningHere'
 import { getPersonAreaColor } from '../lib/person-colors'
 import { fetchReachableAreas, type EventTimelineResponse, type GeoJsonGeometry, type Person, type ReachableAreaResponse } from '../lib/people-api'
 
@@ -205,7 +206,8 @@ export default function ReachableAreaMapPage({ people, timeline, onBack, onNext,
           <h1 className="text-3xl font-bold">Reachable Area Map</h1>
           {timeline.optimal_start_time && timeline.optimal_end_time && <p className="mt-1">Suggested event: {timeline.optimal_start_time}–{timeline.optimal_end_time}</p>}
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <WhatsHappeningHere title="Reachable Area Map" docFile="reachable-area-map.md" />
           <button type="button" onClick={onBack} className="rounded-md border-2 border-secondary px-4 py-2 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary">Back</button>
           <button
             type="button"

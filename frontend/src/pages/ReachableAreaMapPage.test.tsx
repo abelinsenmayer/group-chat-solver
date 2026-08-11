@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { fetchReachableAreas, type Person, type ReachableAreaResponse } from '../lib/people-api'
 import ReachableAreaMapPage from './ReachableAreaMapPage'
@@ -159,4 +160,25 @@ test('does not refetch when an initial result is provided', async () => {
 
   expect(screen.getByText('Travel time: 30 min')).toBeInTheDocument()
   await waitFor(() => expect(fetchReachableAreas).not.toHaveBeenCalled())
+})
+
+test('shows a help button that opens an explanation dialog', async () => {
+  vi.mocked(fetchReachableAreas).mockResolvedValue({
+    status: 'ok',
+    optimal_start_time: '18:00',
+    people: [{ person: elena, travel_time_minutes: 30, area }],
+    overlap: area,
+  })
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => 'Calls `find_reachable_area` for each person.' }))
+  const user = userEvent.setup()
+
+  render(<ReachableAreaMapPage people={[elena]} timeline={timeline} onBack={vi.fn()} onNext={vi.fn()} />)
+  await waitFor(() => expect(addSource).toHaveBeenCalled())
+
+  const helpButton = screen.getByRole('button', { name: /what's happening here\?/i })
+  expect(helpButton).toBeInTheDocument()
+
+  await user.click(helpButton)
+  expect(screen.getByRole('dialog')).toBeInTheDocument()
+  expect(await screen.findByText(/find_reachable_area/i)).toBeInTheDocument()
 })

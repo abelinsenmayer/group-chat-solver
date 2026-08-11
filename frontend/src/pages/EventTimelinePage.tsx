@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CircleUserRound } from 'lucide-react'
+import WhatsHappeningHere from '../components/WhatsHappeningHere'
 import { getPersonAreaColor } from '../lib/person-colors'
 import { fetchEventTimeline, type EventTimelineResponse, type Person } from '../lib/people-api'
 
@@ -81,10 +82,17 @@ export default function EventTimelinePage({ people, onBack, onNext, initialTimel
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-6 py-10 text-secondary sm:px-12 sm:py-16">
-      <header className="max-w-3xl">
-        <p className="text-sm">Plan the group&apos;s</p>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Event Timeline Optimizer</h1>
-        <p className="mt-6 text-base">We found the event time that gives everyone the most time to reach a place they can enjoy.</p>
+      <header className="flex flex-wrap items-start justify-between gap-4 max-w-3xl">
+        <div>
+          <p className="text-sm">Plan the group&apos;s</p>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Event Timeline Optimizer</h1>
+          <p className="mt-6 text-base">
+            {people.length === 1
+              ? "We found the event time that gives you the most time to reach a place you'll enjoy."
+              : "We found the event time that gives everyone the most time to reach a place they can enjoy."}
+          </p>
+        </div>
+        <WhatsHappeningHere title="Event Timeline Optimizer" docFile="event-timeline.md" />
       </header>
 
       <section className="mt-14" aria-live="polite">

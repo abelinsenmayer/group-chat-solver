@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import { fetchEventTimeline, type Person } from '../lib/people-api'
 import EventTimelinePage from './EventTimelinePage'
@@ -83,4 +84,25 @@ test('does not refetch when an initial timeline is provided', async () => {
 
   expect(screen.getByText('6:00 PM–7:00 PM')).toBeInTheDocument()
   await waitFor(() => expect(fetchEventTimeline).not.toHaveBeenCalled())
+})
+
+test('shows a help button that opens an explanation dialog', async () => {
+  vi.mocked(fetchEventTimeline).mockResolvedValue({
+    status: 'ok',
+    common_window: { start: '17:30', end: '20:00' },
+    optimal_start_time: '18:00',
+    optimal_end_time: '19:00',
+  })
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => 'Uses `scipy.optimize.minimize_scalar` to find the best start time.' }))
+  const user = userEvent.setup()
+
+  render(<EventTimelinePage people={[elena]} onBack={vi.fn()} onNext={vi.fn()} />)
+  await screen.findByRole('heading', { name: 'Event Timeline Optimizer' })
+
+  const helpButton = screen.getByRole('button', { name: /what's happening here\?/i })
+  expect(helpButton).toBeInTheDocument()
+
+  await user.click(helpButton)
+  expect(screen.getByRole('dialog')).toBeInTheDocument()
+  expect(await screen.findByText(/scipy.optimize.minimize_scalar/i)).toBeInTheDocument()
 })

@@ -456,6 +456,22 @@ test('Retry resets to the idle state showing Start button again', async () => {
   expect(screen.getByRole('button', { name: /start/i })).toBeInTheDocument()
 })
 
+test('shows a help button that opens an explanation dialog', async () => {
+  vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
+  mockEventSubscription()
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => 'Uses a LangGraph state machine.' }))
+  const user = userEvent.setup()
+
+  render(<SolveRestaurantsPage people={[elena]} overlap={overlap} onBack={vi.fn()} />)
+
+  const helpButton = screen.getByRole('button', { name: /what's happening here\?/i })
+  expect(helpButton).toBeInTheDocument()
+
+  await user.click(helpButton)
+  expect(screen.getByRole('dialog')).toBeInTheDocument()
+  expect(await screen.findByText(/LangGraph/i)).toBeInTheDocument()
+})
+
 test('cards enter pending-trash phase before being fully trashed', async () => {
   vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
   const emit = mockEventSubscription()
