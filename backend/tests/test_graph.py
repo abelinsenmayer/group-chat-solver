@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from src.solve_restaurants import events
 from src.solve_restaurants.graph import create_graph, run_solve_restaurants, start_solve_restaurants
+from src.solve_restaurants.planner import NoRestaurantsFoundError
 from src.solve_restaurants.state import JudgeVerdict, RestaurantSuggestion, Verdict, person_to_payload
 from src.person import Person
 
@@ -78,6 +79,34 @@ def test_run_solve_restaurants_passes_run_id_into_state_and_send_payload():
 
     assert final_state.run_id == "run-2"
     assert seen_run_ids == ["run-2"]
+
+
+def test_run_solve_restaurants_emits_no_restaurants_found_when_planner_finds_none():
+    people = [Person("A", (time(17), time(20)), (40.0, -73.0), "vegetarian")]
+    overlap = {
+        "type": "Polygon",
+        "coordinates": [[[-74, 40], [-72, 40], [-72, 41], [-74, 41], [-74, 40]]],
+    }
+
+    emitted = []
+
+    def fake_planner(_state):
+        raise NoRestaurantsFoundError("No restaurants found")
+
+    with patch("src.solve_restaurants.graph.events.emit", side_effect=lambda run_id, event: emitted.append((run_id, event))):
+        with patch("src.solve_restaurants.graph.planner", side_effect=fake_planner):
+            with patch("src.solve_restaurants.graph.run_logger.save_run"):
+                events.create_run("run-no-restaurants")
+                final_state = asyncio.run(run_solve_restaurants(people, overlap, "run-no-restaurants"))
+                events.discard("run-no-restaurants")
+
+    assert final_state.result is not None
+    assert final_state.result.status == "no_restaurants_found"
+    assert final_state.result.suggestions == []
+    assert (
+        "run-no-restaurants",
+        {"type": "final_result", "status": "no_restaurants_found", "suggestions": []},
+    ) in emitted
 
 
 def test_start_solve_restaurants_uses_the_same_run_id_for_events_and_return_value():

@@ -5,10 +5,12 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
 from src.solve_restaurants.planner import (
+    NoRestaurantsFoundError,
     PlannerSelectionError,
     SelectedSuggestion,
     SuggestionSelection,
     _create_search_tool,
+    _planner_system_prompt,
     planner,
 )
 from src.solve_restaurants.state import SolveRestaurantsState, person_to_payload
@@ -303,5 +305,124 @@ def test_planner_raises_when_no_suggestions_selected():
 
     with patch("src.solve_restaurants.planner.ChatOllama"):
         with patch("src.solve_restaurants.planner.create_agent", return_value=mock_agent):
-            with pytest.raises(PlannerSelectionError):
+            with pytest.raises(NoRestaurantsFoundError):
                 planner(state)
+
+
+def test_search_restaurants_tool_filters_excluded_ids():
+    raw_features = [
+        {
+            "properties": {
+                "mapbox_id": "abc123",
+                "name": "Test Place",
+                "address": "123 Main St",
+                "coordinates": {"longitude": -73.0, "latitude": 40.0},
+            }
+        },
+        {
+            "properties": {
+                "mapbox_id": "excluded-id",
+                "name": "Old Place",
+                "address": "456 Old St",
+                "coordinates": {"longitude": -73.1, "latitude": 40.1},
+            }
+        },
+    ]
+    polygon_coords = [(-74.0, 40.0), (-72.0, 40.0), (-72.0, 41.0), (-74.0, 41.0)]
+    accumulated_features: list[dict] = []
+
+    with patch(
+        "src.solve_restaurants.planner.find_pois_in_polygon", return_value=raw_features
+    ) as mock_pois:
+        search_tool = _create_search_tool(
+            polygon_coords, accumulated_features, excluded_ids={"excluded-id"}
+        )
+        result = search_tool.invoke({"query": "vegetarian", "category": "restaurant"})
+
+    mock_pois.assert_called_once_with(
+        polygon_coords=polygon_coords,
+        search_term="vegetarian",
+        limit=10,
+        category="restaurant",
+    )
+    assert "Test Place" in result
+    assert "abc123" in result
+    assert "Old Place" not in result
+    assert "excluded-id" not in result
+    assert len(accumulated_features) == 1
+    assert accumulated_features[0]["properties"]["mapbox_id"] == "abc123"
+
+
+def test_planner_skips_previously_selected_ids_and_returns_them():
+    people = [person_to_payload(Person("A", (time(17), time(20)), (40.0, -73.0), "vegetarian"))]
+    overlap = {
+        "type": "Polygon",
+        "coordinates": [[[-74, 40], [-72, 40], [-72, 41], [-74, 41], [-74, 40]]],
+    }
+    state = SolveRestaurantsState(
+        people=people, overlap=overlap, past_suggestion_ids={"r0"}
+    )
+
+    raw_features = [
+        {
+            "properties": {
+                "mapbox_id": "r0",
+                "name": "Restaurant 0",
+                "address": "0 Main St",
+                "coordinates": {"longitude": -73.0, "latitude": 40.0},
+            }
+        },
+        {
+            "properties": {
+                "mapbox_id": "r1",
+                "name": "Restaurant 1",
+                "address": "1 Main St",
+                "coordinates": {"longitude": -73.0, "latitude": 40.0},
+            }
+        },
+    ]
+    selected_from_llm = [
+        SelectedSuggestion(id="r0", name="Restaurant 0", address="0 Main St", coordinates=(-73.0, 40.0)),
+        SelectedSuggestion(id="r1", name="Restaurant 1", address="1 Main St", coordinates=(-73.0, 40.0)),
+    ]
+
+    mock_agent = MagicMock()
+    mock_agent.invoke.return_value = {
+        "structured_response": SuggestionSelection(selected=selected_from_llm)
+    }
+
+    def fake_create_agent(*, tools, **kwargs):
+        tools[0].invoke({"query": "vegetarian"})
+        return mock_agent
+
+    with patch("src.solve_restaurants.planner.find_pois_in_polygon", return_value=raw_features):
+        with patch("src.solve_restaurants.planner.ChatOllama"):
+            with patch(
+                "src.solve_restaurants.planner.create_agent", side_effect=fake_create_agent
+            ):
+                result = planner(state)
+
+    assert len(result["suggestions"]) == 1
+    assert result["suggestions"][0].id == "r1"
+    assert result["past_suggestion_ids"] == {"r1"}
+
+
+def test_planner_system_prompt_lists_excluded_ids():
+    people = [person_to_payload(Person("A", (time(17), time(20)), (40.0, -73.0), "vegetarian"))]
+    prompt = _planner_system_prompt(people, "", excluded_ids={"old-id"})
+    assert "Previously suggested restaurants" in prompt
+    assert "old-id" in prompt
+    assert "do NOT select these again" in prompt
+
+
+def test_planner_system_prompt_coaches_empty_selection_when_no_restaurants():
+    people = [person_to_payload(Person("A", (time(17), time(20)), (40.0, -73.0), "vegetarian"))]
+    prompt = _planner_system_prompt(people, "")
+    assert "selected: []" in prompt
+    assert "cannot find any" in prompt.lower()
+
+
+def test_planner_system_prompt_omits_excluded_section_when_empty():
+    people = [person_to_payload(Person("A", (time(17), time(20)), (40.0, -73.0), "vegetarian"))]
+    prompt = _planner_system_prompt(people, "")
+    assert "Previously suggested restaurants" not in prompt

@@ -161,6 +161,8 @@ def find_pois_in_polygon(
     if category:
         params["poi_category"] = category
 
+    logger.debug("Searching for POIs with params=%s", params)
+
     response = requests.get(url, params=params, timeout=30)
     response.raise_for_status()
 

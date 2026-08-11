@@ -21,6 +21,10 @@ def add_lists(left: list, right: list) -> list:
     return left + right
 
 
+def union_sets(left: set, right: set) -> set:
+    return left | right
+
+
 class RestaurantSuggestion(BaseModel):
     id: str
     name: str
@@ -41,7 +45,7 @@ class JudgeVerdict(BaseModel):
 
 
 class FinalResult(BaseModel):
-    status: Literal["consensus", "no_consensus"]
+    status: Literal["consensus", "no_consensus", "no_restaurants_found"]
     suggestions: list[RestaurantSuggestion]
 
 
@@ -58,6 +62,7 @@ class SolveRestaurantsState(BaseModel):
     run_id: str = ""
     round: int = 1
     suggestions: list[RestaurantSuggestion] = []
+    past_suggestion_ids: Annotated[set[str], union_sets] = set()
     verdicts: Annotated[dict[str, dict[str, JudgeVerdict]], merge_dicts] = {}
     feedback_summary: str = ""
     result: FinalResult | None = None

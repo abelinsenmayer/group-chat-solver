@@ -22,6 +22,10 @@ class PlannerSelectionError(RuntimeError):
     """Raised when the planner LLM does not select any restaurant suggestions."""
 
 
+class NoRestaurantsFoundError(PlannerSelectionError):
+    """Raised when the planner LLM cannot find any suitable restaurants."""
+
+
 def _extract_exterior_ring(overlap: dict) -> list[tuple[float, float]]:
     if overlap.get("type") == "Polygon":
         coords = overlap["coordinates"][0]
@@ -32,7 +36,13 @@ def _extract_exterior_ring(overlap: dict) -> list[tuple[float, float]]:
     return [(float(lon), float(lat)) for lon, lat in coords]
 
 
-def _create_search_tool(polygon_coords: list[tuple[float, float]], accumulated_features: list[dict]):
+def _create_search_tool(
+    polygon_coords: list[tuple[float, float]],
+    accumulated_features: list[dict],
+    excluded_ids: set[str] | None = None,
+):
+    excluded_ids = excluded_ids or set()
+
     @tool
     def search_restaurants(query: str, category: str = "restaurant") -> str:
         """Search Mapbox for restaurants (or other POIs) inside the group's shared area.
@@ -55,15 +65,24 @@ def _create_search_tool(polygon_coords: list[tuple[float, float]], accumulated_f
         except Exception as error:
             return f"Error searching for restaurants: {error}"
 
-        if not raw_features:
+        filtered_features = [
+            feature
+            for feature in raw_features
+            if feature.get("properties", {}).get("mapbox_id") not in excluded_ids
+        ]
+        
+        if len(filtered_features) < len(raw_features):
+            logger.debug("Filtered out %d restaurants that were already used", len(raw_features) - len(filtered_features))
+
+        if not filtered_features:
             logger.debug("No restaurants found for query=%r, category=%r", query, category)
             return "No restaurants found for this query. Try a different query or category."
 
-        logger.debug("Found %d restaurants for query=%r, category=%r", len(raw_features), query, category)
-        accumulated_features.extend(raw_features)
+        logger.debug("Found %d restaurants for query=%r, category=%r", len(filtered_features), query, category)
+        accumulated_features.extend(filtered_features)
 
         lines = []
-        for feature in raw_features:
+        for feature in filtered_features:
             props = feature.get("properties", {})
             coords = props.get("coordinates", {})
             lines.append(
@@ -87,13 +106,15 @@ class SuggestionSelection(BaseModel):
     selected: list[SelectedSuggestion]
 
 
-@traceable(name="planner")
 def planner(state) -> dict:
     events.emit(state.run_id, {"type": "planner_started", "round": state.round})
     settings = get_settings()
     polygon_coords = _extract_exterior_ring(state.overlap)
     accumulated_features: list[dict] = []
-    search_tool = _create_search_tool(polygon_coords, accumulated_features)
+    excluded_ids = getattr(state, "past_suggestion_ids", set()) or set()
+    search_tool = _create_search_tool(
+        polygon_coords, accumulated_features, excluded_ids=excluded_ids
+    )
 
     llm = ChatOllama(
         base_url=settings.ollama_base_url,
@@ -103,7 +124,9 @@ def planner(state) -> dict:
     agent = create_agent(
         model=llm,
         tools=[search_tool],
-        system_prompt=_planner_system_prompt(state.people, state.feedback_summary),
+        system_prompt=_planner_system_prompt(
+            state.people, state.feedback_summary, excluded_ids=excluded_ids
+        ),
         middleware=[ToolCallLimitMiddleware(tool_name="search_restaurants", run_limit=3)],
         response_format=SuggestionSelection,
     )
@@ -126,6 +149,10 @@ def planner(state) -> dict:
         raise PlannerSelectionError(
             "Planner LLM did not return a usable structured response"
         )
+    if not selection.selected:
+        raise NoRestaurantsFoundError(
+            "No restaurants found in the selected area that satisfy the group's preferences."
+        )
 
     feature_by_id = {
         feature.get("properties", {}).get("mapbox_id"): feature for feature in accumulated_features
@@ -133,6 +160,9 @@ def planner(state) -> dict:
 
     selected: list[RestaurantSuggestion] = []
     for item in selection.selected:
+        if item.id in excluded_ids:
+            logger.warning("Planner selected previously used mapbox_id %r; skipping", item.id)
+            continue
         feature = feature_by_id.get(item.id)
         if feature is None:
             logger.warning("Planner selected unknown mapbox_id %r; skipping", item.id)
@@ -176,12 +206,14 @@ def planner(state) -> dict:
         state_snapshot={
             "round": state.round,
             "selected_ids": [s.id for s in selected],
+            "excluded_ids": sorted(excluded_ids),
         },
         notes=[f"Selected {len(selected)} suggestions via tool-calling search"],
     )
 
     return {
         "suggestions": selected,
+        "past_suggestion_ids": {s.id for s in selected},
         "verdicts": {},
         "logs": [log],
     }
@@ -216,17 +248,31 @@ def _recover_structured_response(messages: list) -> SuggestionSelection | None:
     return SuggestionSelection(selected=list(recovered.values()))
 
 
-def _planner_system_prompt(people: list[PersonPayload], feedback_summary: str) -> str:
+def _planner_system_prompt(
+    people: list[PersonPayload],
+    feedback_summary: str,
+    excluded_ids: set[str] | None = None,
+) -> str:
     preferences = "\n".join(f"- {p.name}: {p.preferences}" for p in people)
     feedback = (
         f"\n\nFeedback from previous round:\n{feedback_summary}"
         if feedback_summary.strip()
         else ""
     )
+    excluded_section = ""
+    if excluded_ids:
+        excluded_list = "\n".join(f"- {rid}" for rid in sorted(excluded_ids))
+        excluded_section = (
+            f"\n\nPreviously suggested restaurants (do NOT select these again; "
+            f"{len(excluded_ids)} total):\n{excluded_list}"
+        )
     return (
         "You are a restaurant planner. Use the search_restaurants tool to find real candidate "
         "restaurants that satisfy the group's preferences, then select up to 5 (fewer if you "
-        "cannot find enough good options) to recommend."
+        "cannot find enough good options) to recommend. "
+        "If you cannot find any suitable restaurants in the shared area, "
+        "call the final selection tool with `selected: []`."
+        + excluded_section
         + feedback
         + "\n\nGroup preferences:\n"
         + preferences

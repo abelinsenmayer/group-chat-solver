@@ -47,6 +47,12 @@ def test_final_result_serialization():
     assert result.model_dump()["suggestions"][0]["name"] == "Sushi Spot"
 
 
+def test_final_result_accepts_no_restaurants_found_status():
+    result = FinalResult(status="no_restaurants_found", suggestions=[])
+    assert result.status == "no_restaurants_found"
+    assert result.suggestions == []
+
+
 def test_judge_verdict_rejected_requires_feedback():
     verdict = JudgeVerdict(verdict=Verdict.REJECTED, feedback="too expensive")
     assert verdict.verdict == "rejected"
@@ -78,3 +84,14 @@ def test_suggestion_event_payload_omits_mapbox_feature():
         "address": "123 Main St",
         "coordinates": [-73.0, 40.0],
     }
+
+
+def test_union_sets_reducer():
+    from src.solve_restaurants.state import union_sets
+
+    assert union_sets({"a", "b"}, {"b", "c"}) == {"a", "b", "c"}
+
+
+def test_state_tracks_past_suggestion_ids():
+    state = SolveRestaurantsState(people=[], overlap={"type": "Polygon", "coordinates": []})
+    assert state.past_suggestion_ids == set()

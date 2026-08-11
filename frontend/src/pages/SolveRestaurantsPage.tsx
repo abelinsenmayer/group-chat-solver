@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { computeCirclePositions } from '../lib/circle-layout'
 import { getPersonAreaColor } from '../lib/person-colors'
 import { cn } from '../lib/utils'
+import { PersonPreferencesPopover } from '../components/PersonPreferencesPopover'
 import { ThoughtBubble } from '../components/ThoughtBubble'
 import { TrashPopover } from '../components/TrashPopover'
 import { WigglyLine } from '../components/WigglyLine'
@@ -25,7 +26,7 @@ type SolveRestaurantsPageProps = {
   overlap: GeoJsonGeometry
   onBack: () => void
   initialStatus?: SolveRestaurantsResponse | null
-  onStatusLoaded?: (status: SolveRestaurantsResponse) => void
+  onStatusLoaded?: (status: SolveRestaurantsResponse | null) => void
 }
 
 type CardVerdict = { verdict: 'approved' | 'rejected'; shortReason: string | null }
@@ -42,7 +43,7 @@ type ConversationState = {
   cards: CardState[]
   activeLines: ActiveLine[]
   plannerThinking: boolean
-  finalStatus: 'consensus' | 'no_consensus' | null
+  finalStatus: 'consensus' | 'no_consensus' | 'no_restaurants_found' | null
   errorMessage: string | null
 }
 
@@ -142,6 +143,8 @@ export default function SolveRestaurantsPage({
   )
   const [trashHovered, setTrashHovered] = useState(false)
   const trashHoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [hoveredPerson, setHoveredPerson] = useState<string | null>(null)
+  const personHoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [conversation, dispatch] = useReducer(conversationReducer, initialConversationState)
 
   const startSimulation = () => {
@@ -170,6 +173,7 @@ export default function SolveRestaurantsPage({
     setStatus('loading')
     setRunId(null)
     dispatch({ type: 'reset' })
+    onStatusLoaded?.(null)
   }
 
   useEffect(() => {
@@ -288,8 +292,18 @@ export default function SolveRestaurantsPage({
                   data-person-wrapper
                   className="absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
                   style={{ left: `${position.xPercent}%`, top: `${position.yPercent}%` }}
+                  onMouseEnter={() => {
+                    if (personHoverTimeout.current) clearTimeout(personHoverTimeout.current)
+                    setHoveredPerson(person.name)
+                  }}
+                  onMouseLeave={() => {
+                    personHoverTimeout.current = setTimeout(() => setHoveredPerson(null), 150)
+                  }}
                 >
                   {thinkingSuggestionName && <ThoughtBubble text={`Evaluating ${thinkingSuggestionName}`} />}
+                  {hoveredPerson === person.name && (
+                    <PersonPreferencesPopover name={person.name} preferences={person.preferences} color={color} />
+                  )}
                   <CircleUserRound size={48} strokeWidth={1.5} color={color} />
                   <span className="text-sm font-bold" style={{ color }}>
                     {person.name}
@@ -385,7 +399,11 @@ export default function SolveRestaurantsPage({
           role="status"
           className="mx-auto mt-8 max-w-md rounded-md border-2 border-secondary px-4 py-3 text-center font-bold"
         >
-          {conversation.finalStatus === 'consensus' ? 'Everyone agrees! 🎉' : 'No compromise could be reached.'}
+          {conversation.finalStatus === 'consensus'
+            ? 'Everyone agrees! 🎉'
+            : conversation.finalStatus === 'no_consensus'
+              ? 'No compromise could be reached.'
+              : 'No restaurants found in this area. Try broadening your search or moving the meeting area.'}
         </p>
       )}
 

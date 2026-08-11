@@ -66,7 +66,7 @@ export type SolveRestaurantsEvent =
       feedback: string | null
     }
   | { type: 'round_complete'; round: number; accepted_ids: string[] }
-  | { type: 'final_result'; status: 'consensus' | 'no_consensus'; suggestions: RestaurantSuggestion[] }
+  | { type: 'final_result'; status: 'consensus' | 'no_consensus' | 'no_restaurants_found'; suggestions: RestaurantSuggestion[] }
   | { type: 'error'; message: string }
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'

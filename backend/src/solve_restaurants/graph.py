@@ -10,8 +10,8 @@ from src.person import Person
 
 from . import events, run_logger
 from .judge import judge
-from .planner import planner
-from .state import SolveRestaurantsState, person_to_payload
+from .planner import NoRestaurantsFoundError, planner
+from .state import FinalResult, SolveRestaurantsState, person_to_payload
 from .success_check import route_after_success_check, success_check
 
 logger = logging.getLogger(__name__)
@@ -57,16 +57,27 @@ async def run_solve_restaurants(people: list[Person], overlap: dict, run_id: str
         overlap=overlap,
         run_id=run_id,
     )
+    final_state: SolveRestaurantsState | None = None
     logger.info("Starting solve-restaurants run %s with %d people", run_id, len(people))
     try:
         final_state_dict = await graph.ainvoke(initial_state)
         final_state = SolveRestaurantsState.model_validate(final_state_dict)
+    except NoRestaurantsFoundError as error:
+        logger.info("No restaurants found for run %s: %s", run_id, error)
+        final_state = SolveRestaurantsState.model_validate(initial_state.model_dump())
+        final_state.result = FinalResult(status="no_restaurants_found", suggestions=[])
+        events.emit(
+            run_id,
+            {"type": "final_result", "status": "no_restaurants_found", "suggestions": []},
+        )
     except Exception as error:
         logger.exception("solve-restaurants run %s failed", run_id)
         events.emit(run_id, {"type": "error", "message": str(error)})
         raise
     finally:
         events.close_run(run_id)
+    if final_state is None:
+        raise RuntimeError(f"solve-restaurants run {run_id} did not produce a final state")
     logger.info("Completed solve-restaurants run %s", run_id)
     run_logger.save_run(run_id, initial_state, final_state)
     return final_state

@@ -22,7 +22,10 @@ function App() {
         overlap={overlap}
         initialStatus={solveRestaurants}
         onStatusLoaded={setSolveRestaurants}
-        onBack={() => setPage('agents')}
+        onBack={() => {
+          setSolveRestaurants(null)
+          setPage('agents')
+        }}
       />
     )
   }

@@ -240,6 +240,21 @@ test('shows a no-compromise banner when the final result has no consensus', asyn
   expect(await screen.findByText('No compromise could be reached.')).toBeInTheDocument()
 })
 
+test('shows a friendly message and retry button when no restaurants are found', async () => {
+  vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
+  const emit = mockEventSubscription()
+  const user = userEvent.setup()
+
+  render(<SolveRestaurantsPage people={[elena]} overlap={overlap} onBack={vi.fn()} />)
+  await user.click(screen.getByRole('button', { name: /start/i }))
+  await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
+
+  emit({ type: 'final_result', status: 'no_restaurants_found', suggestions: [] })
+
+  expect(await screen.findByText(/No restaurants found in this area/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
+})
+
 test('shows an error banner when the run reports an error', async () => {
   vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
   const emit = mockEventSubscription()
@@ -758,4 +773,44 @@ test('trash popover has an opaque background and floats above other elements', a
   expect(popover).toHaveTextContent('Too far')
   expect(popover).toHaveClass('bg-background')
   expect(popover).toHaveClass('z-50')
+})
+
+test('Retry clears the loaded status so a new simulation can be started', async () => {
+  vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-2', status: 'started' })
+  const emit = mockEventSubscription()
+  const onStatusLoaded = vi.fn()
+  const user = userEvent.setup()
+
+  const { rerender } = render(
+    <SolveRestaurantsPage
+      people={[elena]}
+      overlap={overlap}
+      initialStatus={{ run_id: 'run-1', status: 'started' }}
+      onBack={vi.fn()}
+      onStatusLoaded={onStatusLoaded}
+    />,
+  )
+
+  await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalledWith('run-1', expect.any(Function)))
+
+  emit({ type: 'final_result', status: 'consensus', suggestions: [] })
+
+  const retryButton = await screen.findByRole('button', { name: /retry/i })
+  await user.click(retryButton)
+
+  expect(onStatusLoaded).toHaveBeenCalledWith(null)
+
+  rerender(
+    <SolveRestaurantsPage
+      people={[elena]}
+      overlap={overlap}
+      initialStatus={null}
+      onBack={vi.fn()}
+      onStatusLoaded={onStatusLoaded}
+    />,
+  )
+
+  await user.click(screen.getByRole('button', { name: /start/i }))
+
+  await waitFor(() => expect(fetchSolveRestaurants).toHaveBeenCalledWith([elena], overlap, expect.any(AbortSignal)))
 })

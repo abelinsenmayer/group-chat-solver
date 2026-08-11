@@ -39,7 +39,6 @@ def _create_web_search_tool(client: TavilyClient):
     return web_search
 
 
-@traceable(name="judge")
 def judge(payload: dict) -> dict:
     run_id = payload.get("run_id", "")
     person = PersonPayload.model_validate(payload["person"])
