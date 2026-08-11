@@ -217,9 +217,11 @@ export default function SolveRestaurantsPage({
   return (
     <main className="mx-auto flex h-screen max-w-4xl flex-col bg-background px-6 py-4 text-secondary sm:px-12 sm:py-6">
       <header className="flex shrink-0 flex-wrap items-start justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">The Conversation</h1>
-        <WhatsHappeningHere title="The Conversation" docFile="solve-restaurants.md" />
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Let's find a restaurant!</h1>
       </header>
+      <section className="w-full flex justify-end">
+        <WhatsHappeningHere title="Finding a restaurant" docFile="solve-restaurants.md" />
+      </section>
 
       {status === 'loading' && simulationPhase === 'running' && (
         <p className="mt-8">Starting the restaurant solver...</p>

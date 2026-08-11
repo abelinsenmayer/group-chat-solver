@@ -203,12 +203,13 @@ export default function ReachableAreaMapPage({ people, timeline, onBack, onNext,
     <main className="flex min-h-screen flex-col bg-background text-secondary">
       <header className="flex flex-wrap items-center justify-between gap-4 px-6 py-5 sm:px-12">
         <div>
-          <h1 className="text-3xl font-bold">Reachable Area Map</h1>
-          {timeline.optimal_start_time && timeline.optimal_end_time && <p className="mt-1">Suggested event: {timeline.optimal_start_time}–{timeline.optimal_end_time}</p>}
+          <h1 className="text-3xl font-bold">Where can everyone meet?</h1>
+          {/* {timeline.optimal_start_time && timeline.optimal_end_time && <p className="mt-1">Suggested event time: {timeline.optimal_start_time}–{timeline.optimal_end_time}</p>} */}
+          <p>Here we show the areas reachable by each person in their available travel time. The area in white is the overlapping area reachable by all participants -- this is where we'll search for a meeting spot.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full">
           <WhatsHappeningHere title="Reachable Area Map" docFile="reachable-area-map.md" />
-          <button type="button" onClick={onBack} className="rounded-md border-2 border-secondary px-4 py-2 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary">Back</button>
+          <button type="button" onClick={onBack} className="ml-auto rounded-md border-2 border-secondary px-4 py-2 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary">Back</button>
           <button
             type="button"
             disabled={!result?.overlap}

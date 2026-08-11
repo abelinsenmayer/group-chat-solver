@@ -4,11 +4,12 @@ import { fetchPeople, type Person } from '../lib/people-api'
 
 type PersonPickerPageProps = {
   onNext: (people: Person[]) => void
+  onBack: () => void
   initialPeople?: Person[]
   onPeopleLoaded?: (people: Person[]) => void
 }
 
-export default function PersonPickerPage({ onNext, initialPeople, onPeopleLoaded }: PersonPickerPageProps) {
+export default function PersonPickerPage({ onNext, onBack, initialPeople, onPeopleLoaded }: PersonPickerPageProps) {
   const [people, setPeople] = useState<Person[]>(initialPeople ?? [])
   const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(initialPeople === undefined)
@@ -54,10 +55,7 @@ export default function PersonPickerPage({ onNext, initialPeople, onPeopleLoaded
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-6 py-10 sm:px-12 sm:py-16">
       <header className="mx-auto max-w-2xl flex flex-col items-center justify-center">
-        <div className="">
-          <p className="text-sm text-secondary text-start">Abe Linsenmayer's</p>
-          <h1 className="text-3xl font-bold tracking-tight text-secondary sm:text-4xl">Group Chat "Solver"</h1>
-        </div>
+        <h1 className="text-3xl font-bold tracking-tight text-secondary sm:text-4xl">Who&apos;s in the chat?</h1>
         <p className="mt-14 text-base text-secondary">Choose the people you want to include in this simulation.</p>
       </header>
 
@@ -95,7 +93,14 @@ export default function PersonPickerPage({ onNext, initialPeople, onPeopleLoaded
         )}
       </section>
 
-      <div className="mt-10 flex justify-end">
+      <div className="mt-10 flex justify-between">
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-secondary rounded-md border-2 border-secondary px-5 py-2 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary"
+        >
+          Back
+        </button>
         <button
           type="button"
           disabled={selectedPeople.length === 0}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { EventTimelineResponse, GeoJsonGeometry, Person, ReachableAreaResponse, SolveRestaurantsResponse } from './lib/people-api'
+import LandingPage from './pages/LandingPage'
 import PersonPickerPage from './pages/PersonPickerPage'
 import EventTimelinePage from './pages/EventTimelinePage'
 import ReachableAreaMapPage from './pages/ReachableAreaMapPage'
@@ -13,7 +14,7 @@ function App() {
   const [availablePeople, setAvailablePeople] = useState<Person[] | undefined>(undefined)
   const [reachableArea, setReachableArea] = useState<ReachableAreaResponse | null>(null)
   const [solveRestaurants, setSolveRestaurants] = useState<SolveRestaurantsResponse | null>(null)
-  const [page, setPage] = useState<'picker' | 'timeline' | 'map' | 'agents' | 'solve-restaurants'>('picker')
+  const [page, setPage] = useState<'landing' | 'picker' | 'timeline' | 'map' | 'agents' | 'solve-restaurants'>('landing')
 
   if (page === 'solve-restaurants' && overlap) {
     return (
@@ -64,10 +65,15 @@ function App() {
     )
   }
 
+  if (page === 'landing') {
+    return <LandingPage onStart={() => setPage('picker')} />
+  }
+
   return (
     <PersonPickerPage
       initialPeople={availablePeople}
       onPeopleLoaded={setAvailablePeople}
+      onBack={() => setPage('landing')}
       onNext={(people) => {
         setSelectedPeople(people)
         setTimeline(null)

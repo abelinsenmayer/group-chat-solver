@@ -51,3 +51,63 @@ select {
 @utility animate-fly-in {
   animation: fly-in 0.5s ease-out;
 }
+
+@keyframes bubble-scroll-up {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes bubble-scroll-down {
+  from {
+    transform: translateY(-50%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@utility animate-bubble-scroll-up {
+  animation: bubble-scroll-up 28s linear infinite;
+}
+
+@utility animate-bubble-scroll-down {
+  animation: bubble-scroll-down 28s linear infinite;
+}
+
+.bubble {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: 1rem;
+  background-color: currentColor;
+}
+
+.bubble::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 0.75rem;
+  height: 1rem;
+  background-color: currentColor;
+}
+
+.bubble-left {
+  border-bottom-left-radius: 0;
+}
+
+.bubble-left::before {
+  left: -0.6rem;
+  clip-path: polygon(100% 0, 0 100%, 100% 100%);
+}
+
+.bubble-right {
+  border-bottom-right-radius: 0;
+}
+
+.bubble-right::before {
+  right: -0.6rem;
+  clip-path: polygon(0 0, 0 100%, 100% 100%);
+}

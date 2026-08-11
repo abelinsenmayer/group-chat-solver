@@ -32,9 +32,24 @@ function mockPeopleRequest(people = [elena]) {
   }))
 }
 
-test('renders people loaded from the API', async () => {
+async function startFromLanding(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: /let's get started/i }))
+}
+
+test('renders the landing page first', async () => {
   mockPeopleRequest()
   render(<App />)
+
+  expect(screen.getByRole('heading', { name: /group chat "solver"/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /let's get started/i })).toBeInTheDocument()
+})
+
+test('renders people loaded from the API', async () => {
+  const user = userEvent.setup()
+  mockPeopleRequest()
+  render(<App />)
+
+  await startFromLanding(user)
 
   expect(await screen.findByRole('button', { name: /elena/i })).toBeInTheDocument()
   expect(screen.getByText(/5:30 PM–8:00 PM/)).toBeInTheDocument()
@@ -42,30 +57,42 @@ test('renders people loaded from the API', async () => {
   expect(screen.getByText(/Outdoor seating preferred/)).toBeInTheDocument()
 })
 
-test('shows a loading message while people are requested', () => {
+test('shows a loading message while people are requested', async () => {
+  const user = userEvent.setup()
   vi.stubGlobal('fetch', vi.fn(() => new Promise(() => undefined)))
   render(<App />)
+
+  await startFromLanding(user)
 
   expect(screen.getByText('Loading sample people...')).toBeInTheDocument()
 })
 
 test('shows an empty message when the API returns no people', async () => {
+  const user = userEvent.setup()
   mockPeopleRequest([])
   render(<App />)
+
+  await startFromLanding(user)
 
   expect(await screen.findByText('No sample people are available.')).toBeInTheDocument()
 })
 
 test('shows a retry action when the API request fails', async () => {
+  const user = userEvent.setup()
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => [] }))
   render(<App />)
+
+  await startFromLanding(user)
 
   expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument()
 })
 
 test('disables Next until a person is selected', async () => {
+  const user = userEvent.setup()
   mockPeopleRequest()
   render(<App />)
+
+  await startFromLanding(user)
 
   expect(await screen.findByRole('button', { name: /next/i })).toBeDisabled()
 })
@@ -74,6 +101,8 @@ test('shows the event timeline after selecting a person', async () => {
   const user = userEvent.setup()
   mockPeopleRequest()
   render(<App />)
+
+  await startFromLanding(user)
 
   await user.click(await screen.findByRole('button', { name: /elena/i }))
   await user.click(screen.getByRole('button', { name: /next/i }))
@@ -115,6 +144,8 @@ test('does not refetch the timeline when navigating back from the map', async ()
   }))
 
   render(<App />)
+
+  await startFromLanding(user)
 
   await user.click(await screen.findByRole('button', { name: /elena/i }))
   await user.click(screen.getByRole('button', { name: /next/i }))
@@ -163,6 +194,8 @@ test('resets the restaurant solver to its initial state when navigating back the
   vi.mocked(subscribeSolveRestaurantsEvents).mockReturnValue(() => {})
 
   render(<App />)
+
+  await startFromLanding(user)
 
   await user.click(await screen.findByRole('button', { name: /elena/i }))
   await user.click(screen.getByRole('button', { name: /next/i }))
