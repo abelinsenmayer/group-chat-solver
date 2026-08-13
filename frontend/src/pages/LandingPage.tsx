@@ -1,6 +1,9 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { PERSON_AREA_COLORS } from '../lib/person-colors'
+import { wakeUpBackend } from '../lib/people-api'
+import { Button } from '../components/ui/button'
 
 export type LandingPageProps = {
   onStart: () => void
@@ -110,16 +113,74 @@ export default function LandingPage({ onStart }: LandingPageProps) {
           </h1>
         </div>
         <p className="mt-10 max-w-lg text-base text-secondary">
-          Description goes here.
+          Can't decide where to eat? Let a team of AI agents help you figure it out.
         </p>
-        <button
-          type="button"
-          onClick={onStart}
-          className="mt-10 rounded-md border-2 border-secondary px-5 py-2 font-bold text-secondary transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary"
-        >
-          Let&apos;s get started <span aria-hidden="true">→</span>
-        </button>
+        <WakeUpButton onStart={onStart} />
       </main>
     </div>
+  )
+}
+
+type WakeUpState = 'warming' | 'ready' | 'error'
+
+type WakeUpButtonProps = {
+  onStart: () => void
+}
+
+function WakeUpButton({ onStart }: WakeUpButtonProps) {
+  const [state, setState] = useState<WakeUpState>('warming')
+
+  useEffect(() => {
+    let cancelled = false
+    wakeUpBackend().then(
+      () => {
+        if (!cancelled) setState('ready')
+      },
+      () => {
+        if (!cancelled) setState('error')
+      },
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const handleRetry = () => {
+    setState('warming')
+    wakeUpBackend().then(
+      () => setState('ready'),
+      () => setState('error'),
+    )
+  }
+
+  if (state === 'error') {
+    return (
+      <div className="mt-10 flex flex-col items-center gap-3">
+        <p className="text-sm text-destructive">Unable to wake up the servers.</p>
+        <Button onClick={handleRetry} variant="outline">
+          Retry
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <Button
+      onClick={onStart}
+      disabled={state !== 'ready'}
+      variant="outline"
+      className="mt-10 rounded-md border-2 border-secondary px-5 py-2 font-bold text-secondary transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary"
+    >
+      {state === 'warming' ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Waking up the servers
+        </>
+      ) : (
+        <>
+          Let&apos;s get started <span aria-hidden="true">→</span>
+        </>
+      )}
+    </Button>
   )
 }

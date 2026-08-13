@@ -1,14 +1,28 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, test, vi } from 'vitest'
+import { expect, test, vi, beforeEach } from 'vitest'
 import LandingPage from './LandingPage'
+import * as peopleApi from '../lib/people-api'
 
-test('renders the title and description placeholder', () => {
+beforeEach(() => {
+  vi.spyOn(peopleApi, 'wakeUpBackend').mockResolvedValue(undefined)
+})
+
+test('shows a disabled warming button while the backend is waking up', () => {
+  vi.spyOn(peopleApi, 'wakeUpBackend').mockImplementation(() => new Promise(() => {}))
   render(<LandingPage onStart={vi.fn()} />)
 
-  expect(screen.getByText("Abe Linsenmayer's")).toBeInTheDocument()
-  expect(screen.getByRole('heading', { name: /group chat "solver"/i })).toBeInTheDocument()
-  expect(screen.getByText(/description goes here/i)).toBeInTheDocument()
+  const button = screen.getByRole('button', { name: /waking up the servers/i })
+  expect(button).toBeInTheDocument()
+  expect(button).toBeDisabled()
+})
+
+test('enables the start button after the backend wakes up', async () => {
+  render(<LandingPage onStart={vi.fn()} />)
+
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: /let's get started/i })).toBeEnabled()
+  })
 })
 
 test('calls onStart when the button is clicked', async () => {
@@ -16,12 +30,18 @@ test('calls onStart when the button is clicked', async () => {
   const onStart = vi.fn()
   render(<LandingPage onStart={onStart} />)
 
-  await user.click(screen.getByRole('button', { name: /let's get started/i }))
+  const button = await screen.findByRole('button', { name: /let's get started/i })
+  await user.click(button)
   expect(onStart).toHaveBeenCalledTimes(1)
 })
 
-test('button uses sentence-case label', () => {
+test('shows an error and retry button when the backend fails to wake up', async () => {
+  vi.spyOn(peopleApi, 'wakeUpBackend').mockRejectedValueOnce(new Error('Backend is not ready.'))
+
   render(<LandingPage onStart={vi.fn()} />)
 
-  expect(screen.getByRole('button', { name: "Let's get started" })).toBeInTheDocument()
+  await waitFor(() => {
+    expect(screen.getByText(/unable to wake up the servers/i)).toBeInTheDocument()
+  })
+  expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
 })

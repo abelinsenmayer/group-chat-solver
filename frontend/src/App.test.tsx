@@ -8,6 +8,7 @@ vi.mock('./lib/people-api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./lib/people-api')>()),
   fetchSolveRestaurants: vi.fn(),
   subscribeSolveRestaurantsEvents: vi.fn(),
+  wakeUpBackend: vi.fn().mockResolvedValue(undefined),
 }))
 
 const elena = {
@@ -41,7 +42,7 @@ test('renders the landing page first', async () => {
   render(<App />)
 
   expect(screen.getByRole('heading', { name: /group chat "solver"/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /let's get started/i })).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: /let's get started/i })).toBeInTheDocument()
 })
 
 test('renders people loaded from the API', async () => {

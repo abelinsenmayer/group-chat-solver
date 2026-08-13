@@ -104,6 +104,16 @@ export async function fetchPeople(signal?: AbortSignal): Promise<Person[]> {
   return response.json() as Promise<Person[]>
 }
 
+export async function wakeUpBackend(signal?: AbortSignal): Promise<void> {
+  const response = signal
+    ? await fetch(`${apiBaseUrl}/api/people`, { signal })
+    : await fetch(`${apiBaseUrl}/api/people`)
+
+  if (!response.ok) {
+    throw new Error('Backend is not ready.')
+  }
+}
+
 export async function fetchEventTimeline(people: Person[], signal?: AbortSignal): Promise<EventTimelineResponse> {
   const response = await postJson('/api/event-timeline', { people }, signal)
 
