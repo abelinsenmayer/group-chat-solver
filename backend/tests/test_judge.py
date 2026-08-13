@@ -50,7 +50,7 @@ def test_judge_approves_suggestion_when_agent_returns_approved():
     }
 
     with patch("src.solve_restaurants.judge.TavilyClient"):
-        with patch("src.solve_restaurants.judge.ChatOllama"):
+        with patch("src.solve_restaurants.judge.get_chat_llm"):
             with patch(
                 "src.solve_restaurants.judge.create_agent", return_value=mock_agent
             ) as mock_create_agent:
@@ -73,7 +73,7 @@ def test_judge_rejects_and_logs_error_on_agent_exception():
     mock_agent.invoke.side_effect = RuntimeError("agent exploded")
 
     with patch("src.solve_restaurants.judge.TavilyClient"):
-        with patch("src.solve_restaurants.judge.ChatOllama"):
+        with patch("src.solve_restaurants.judge.get_chat_llm"):
             with patch("src.solve_restaurants.judge.create_agent", return_value=mock_agent):
                 result = judge({"person": person.model_dump(), "suggestions": [suggestion.model_dump()]})
 
@@ -101,7 +101,7 @@ def test_judge_emits_evaluating_and_verdict_events():
         side_effect=lambda run_id, event: emitted.append((run_id, event)),
     ):
         with patch("src.solve_restaurants.judge.TavilyClient"):
-            with patch("src.solve_restaurants.judge.ChatOllama"):
+            with patch("src.solve_restaurants.judge.get_chat_llm"):
                 with patch("src.solve_restaurants.judge.create_agent", return_value=mock_agent):
                     judge(
                         {
@@ -136,7 +136,7 @@ def test_judge_defaults_run_id_when_missing_from_payload():
 
     with patch("src.solve_restaurants.judge.events.emit") as mock_emit:
         with patch("src.solve_restaurants.judge.TavilyClient"):
-            with patch("src.solve_restaurants.judge.ChatOllama"):
+            with patch("src.solve_restaurants.judge.get_chat_llm"):
                 with patch("src.solve_restaurants.judge.create_agent", return_value=mock_agent):
                     judge({"person": person.model_dump(), "suggestions": [suggestion.model_dump()]})
 
@@ -182,7 +182,7 @@ def test_judge_recovers_structured_response_when_agent_returns_none():
     }
 
     with patch("src.solve_restaurants.judge.TavilyClient"):
-        with patch("src.solve_restaurants.judge.ChatOllama"):
+        with patch("src.solve_restaurants.judge.get_chat_llm"):
             with patch("src.solve_restaurants.judge.create_agent", return_value=mock_agent):
                 result = judge({"person": person.model_dump(), "suggestions": [suggestion.model_dump()]})
 

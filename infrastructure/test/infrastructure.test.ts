@@ -26,6 +26,11 @@ test('creates a container-image Lambda with a streaming, IAM-authed function URL
   template.hasResourceProperties('AWS::Lambda::Function', {
     PackageType: 'Image',
     Timeout: 900,
+    Environment: {
+      Variables: {
+        AI_PROVIDER: process.env.AI_PROVIDER ?? 'ollama',
+      },
+    },
   });
 
   template.hasResourceProperties('AWS::Lambda::Url', {

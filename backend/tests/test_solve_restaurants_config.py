@@ -6,11 +6,15 @@ from src.solve_restaurants.config import Settings, configure_langsmith_tracing, 
 def test_settings_load_required_env_vars(monkeypatch):
     monkeypatch.setenv("MAPBOX_ACCESS_TOKEN", "mapbox-token")
     monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
+    monkeypatch.delenv("LANGSMITH_API_KEY", raising=False)
     get_settings.cache_clear()
 
     settings = get_settings()
     assert settings.mapbox_access_token == "mapbox-token"
     assert settings.tavily_api_key == "tavily-key"
+    assert settings.ai_provider == "ollama"
+    assert settings.google_api_key is None
+    assert settings.gemini_model == "gemini-2.0-flash"
     assert settings.ollama_base_url == "http://localhost:11434"
     assert settings.ollama_model == "gemma4:12b"
     assert settings.log_dir.endswith(os.path.join("logs", "runs"))
@@ -26,6 +30,44 @@ def test_settings_langsmith_endpoint_reads_from_env(monkeypatch):
 
     settings = get_settings()
     assert settings.langsmith_endpoint == "https://custom.langchain.example"
+
+
+def test_settings_ai_provider_and_gemini_can_be_overridden(monkeypatch):
+    monkeypatch.setenv("MAPBOX_ACCESS_TOKEN", "mapbox-token")
+    monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GOOGLE_API_KEY", "google-key")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-2.5-flash")
+    get_settings.cache_clear()
+
+    settings = get_settings()
+    assert settings.ai_provider == "gemini"
+    assert settings.google_api_key == "google-key"
+    assert settings.gemini_model == "gemini-2.5-flash"
+
+
+def test_settings_ai_provider_is_case_insensitive_and_normalizes(monkeypatch):
+    monkeypatch.setenv("MAPBOX_ACCESS_TOKEN", "mapbox-token")
+    monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
+    monkeypatch.setenv("AI_PROVIDER", "  GEMINI  ")
+    get_settings.cache_clear()
+
+    settings = get_settings()
+    assert settings.ai_provider == "gemini"
+
+
+def test_settings_ai_provider_rejects_invalid_values(monkeypatch):
+    monkeypatch.setenv("MAPBOX_ACCESS_TOKEN", "mapbox-token")
+    monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
+    monkeypatch.setenv("AI_PROVIDER", "openai")
+    get_settings.cache_clear()
+
+    try:
+        get_settings()
+    except ValueError as error:
+        assert "must be 'gemini' or 'ollama'" in str(error)
+    else:
+        assert False, "Expected ValueError for invalid AI_PROVIDER"
 
 
 def test_configure_langsmith_tracing_noop_when_disabled(monkeypatch):

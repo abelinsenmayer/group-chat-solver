@@ -4,12 +4,12 @@ import logging
 from langchain.agents import create_agent
 from langchain.agents.middleware import ToolCallLimitMiddleware
 from langchain_core.tools import tool
-from langchain_ollama import ChatOllama
 from langsmith import traceable
 from tavily import TavilyClient
 
 from . import events
 from .config import get_settings
+from .llm import get_chat_llm
 from .state import JudgeVerdict, PersonPayload, RestaurantSuggestion, StepLog, Verdict
 
 
@@ -46,11 +46,7 @@ def judge(payload: dict) -> dict:
     settings = get_settings()
     client = TavilyClient(api_key=settings.tavily_api_key)
     web_search_tool = _create_web_search_tool(client)
-    llm = ChatOllama(
-        base_url=settings.ollama_base_url,
-        model=settings.ollama_model,
-        temperature=0.2,
-    )
+    llm = get_chat_llm(temperature=0.2)
 
     verdicts = {}
     notes = []

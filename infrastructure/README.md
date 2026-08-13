@@ -24,13 +24,15 @@ the AWS CLI before the first deploy:
 ```powershell
 aws ssm put-parameter --name "/group-chat-solver/prod/mapbox-access-token" --type SecureString --value "<mapbox secret token>"
 aws ssm put-parameter --name "/group-chat-solver/prod/tavily-api-key" --type SecureString --value "<tavily api key>"
+aws ssm put-parameter --name "/group-chat-solver/prod/google-api-key" --type SecureString --value "<google api key>"
 aws ssm put-parameter --name "/group-chat-solver/prod/langsmith-api-key" --type SecureString --value "<langsmith api key>"
 aws ssm put-parameter --name "/group-chat-solver/prod/mapbox-public-token" --type SecureString --value "<mapbox public token>"
 ```
 
 The `mapbox-access-token` is the server-side Mapbox token (isochrone
 requests); `mapbox-public-token` is the browser-scoped token baked into the
-frontend build.
+frontend build. `google-api-key` is only required when `AI_PROVIDER` is set to
+`gemini`; it can be a placeholder when running with Ollama.
 
 ## Install dependencies
 
@@ -42,6 +44,15 @@ npm install
 ## Deploy
 
 ```powershell
+cd infrastructure
+.\scripts\deploy.ps1
+```
+
+Set the optional `AI_PROVIDER` environment variable before deploying to choose
+the model provider. It defaults to `ollama` and can be set to `gemini`:
+
+```powershell
+$env:AI_PROVIDER = "gemini"
 cd infrastructure
 .\scripts\deploy.ps1
 ```

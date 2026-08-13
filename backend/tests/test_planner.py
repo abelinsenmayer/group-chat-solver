@@ -100,7 +100,7 @@ def test_planner_returns_agent_selected_suggestions():
         return mock_agent
 
     with patch("src.solve_restaurants.planner.find_pois_in_polygon", return_value=raw_features):
-        with patch("src.solve_restaurants.planner.ChatOllama"):
+        with patch("src.solve_restaurants.planner.get_chat_llm"):
             with patch(
                 "src.solve_restaurants.planner.create_agent", side_effect=fake_create_agent
             ) as mock_create_agent:
@@ -151,7 +151,7 @@ def test_planner_skips_selections_with_unknown_mapbox_id():
         return mock_agent
 
     with patch("src.solve_restaurants.planner.find_pois_in_polygon", return_value=raw_features):
-        with patch("src.solve_restaurants.planner.ChatOllama"):
+        with patch("src.solve_restaurants.planner.get_chat_llm"):
             with patch("src.solve_restaurants.planner.create_agent", side_effect=fake_create_agent):
                 result = planner(state)
 
@@ -230,7 +230,7 @@ def test_planner_recovers_structured_response_when_agent_returns_none():
         return mock_agent
 
     with patch("src.solve_restaurants.planner.find_pois_in_polygon", return_value=raw_features):
-        with patch("src.solve_restaurants.planner.ChatOllama"):
+        with patch("src.solve_restaurants.planner.get_chat_llm"):
             with patch("src.solve_restaurants.planner.create_agent", side_effect=fake_create_agent):
                 result = planner(state)
 
@@ -275,7 +275,7 @@ def test_planner_emits_started_and_suggestions_events():
         side_effect=lambda run_id, event: emitted.append((run_id, event)),
     ):
         with patch("src.solve_restaurants.planner.find_pois_in_polygon", return_value=raw_features):
-            with patch("src.solve_restaurants.planner.ChatOllama"):
+            with patch("src.solve_restaurants.planner.get_chat_llm"):
                 with patch("src.solve_restaurants.planner.create_agent", side_effect=fake_create_agent):
                     planner(state)
 
@@ -303,7 +303,7 @@ def test_planner_raises_when_no_suggestions_selected():
     mock_agent = MagicMock()
     mock_agent.invoke.return_value = {"structured_response": SuggestionSelection(selected=[])}
 
-    with patch("src.solve_restaurants.planner.ChatOllama"):
+    with patch("src.solve_restaurants.planner.get_chat_llm"):
         with patch("src.solve_restaurants.planner.create_agent", return_value=mock_agent):
             with pytest.raises(NoRestaurantsFoundError):
                 planner(state)
@@ -396,7 +396,7 @@ def test_planner_skips_previously_selected_ids_and_returns_them():
         return mock_agent
 
     with patch("src.solve_restaurants.planner.find_pois_in_polygon", return_value=raw_features):
-        with patch("src.solve_restaurants.planner.ChatOllama"):
+        with patch("src.solve_restaurants.planner.get_chat_llm"):
             with patch(
                 "src.solve_restaurants.planner.create_agent", side_effect=fake_create_agent
             ):

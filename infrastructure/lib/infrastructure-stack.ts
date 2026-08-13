@@ -28,6 +28,9 @@ export class InfrastructureStack extends cdk.Stack {
       memorySize: 1024,
       timeout: cdk.Duration.minutes(15),
       architecture: lambda.Architecture.X86_64,
+      environment: {
+        AI_PROVIDER: process.env.AI_PROVIDER ?? 'gemini',
+      },
     });
 
     this.backendFunction.addToRolePolicy(new iam.PolicyStatement({

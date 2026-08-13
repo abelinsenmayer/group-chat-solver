@@ -4,7 +4,6 @@ import logging
 from langchain.agents import create_agent
 from langchain.agents.middleware import ToolCallLimitMiddleware
 from langchain_core.tools import tool
-from langchain_ollama import ChatOllama
 from langsmith import traceable
 from pydantic import BaseModel
 
@@ -12,6 +11,7 @@ from src.mapping_utils import find_pois_in_polygon
 
 from . import events
 from .config import get_settings
+from .llm import get_chat_llm
 from .state import PersonPayload, RestaurantSuggestion, StepLog, suggestion_event_payload
 
 
@@ -116,11 +116,7 @@ def planner(state) -> dict:
         polygon_coords, accumulated_features, excluded_ids=excluded_ids
     )
 
-    llm = ChatOllama(
-        base_url=settings.ollama_base_url,
-        model=settings.ollama_model,
-        temperature=0.2,
-    )
+    llm = get_chat_llm(temperature=0.2)
     agent = create_agent(
         model=llm,
         tools=[search_tool],
