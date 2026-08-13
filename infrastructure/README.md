@@ -48,14 +48,19 @@ cd infrastructure
 .\scripts\deploy.ps1
 ```
 
-Set the optional `AI_PROVIDER` environment variable before deploying to choose
-the model provider. It defaults to `ollama` and can be set to `gemini`:
+Cloud deploys always default to `AI_PROVIDER=gemini`, regardless of any
+`ollama` default used for local development. To override this (e.g. to
+deploy with `ollama` instead), set the `AI_PROVIDER` environment variable
+before deploying — it takes precedence over the `gemini` default:
 
 ```powershell
-$env:AI_PROVIDER = "gemini"
+$env:AI_PROVIDER = "ollama"
 cd infrastructure
 .\scripts\deploy.ps1
 ```
+
+Unset `$env:AI_PROVIDER` (or open a fresh shell) to go back to the `gemini`
+default on the next deploy.
 
 This builds `frontend/dist` with `VITE_MAPBOX_ACCESS_TOKEN` pulled from SSM
 and `VITE_API_BASE_URL` set to same-origin (CloudFront serves both the site

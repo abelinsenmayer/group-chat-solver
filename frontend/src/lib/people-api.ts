@@ -69,7 +69,28 @@ export type SolveRestaurantsEvent =
   | { type: 'final_result'; status: 'consensus' | 'no_consensus' | 'no_restaurants_found'; suggestions: RestaurantSuggestion[] }
   | { type: 'error'; message: string }
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? '' : 'http://127.0.0.1:8000')
+
+// CloudFront's origin access control (OAC) signs requests to our Lambda function URL origin
+// using SigV4, but for POST/PUT requests it relies on the caller to supply the payload hash:
+// without an `x-amz-content-sha256` header matching the actual body, the signature CloudFront
+// computes won't match what Lambda expects, and every such request is rejected with
+// "The request signature we calculated does not match the signature you provided." GET requests
+// with no body (like fetchPeople) are unaffected, which is why only our POST endpoints saw this.
+async function sha256Hex(body: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body))
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+async function postJson(path: string, payload: unknown, signal?: AbortSignal): Promise<Response> {
+  const body = JSON.stringify(payload)
+  return fetch(`${apiBaseUrl}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-amz-content-sha256': await sha256Hex(body) },
+    body,
+    signal,
+  })
+}
 
 export async function fetchPeople(signal?: AbortSignal): Promise<Person[]> {
   const response = signal
@@ -84,12 +105,7 @@ export async function fetchPeople(signal?: AbortSignal): Promise<Person[]> {
 }
 
 export async function fetchEventTimeline(people: Person[], signal?: AbortSignal): Promise<EventTimelineResponse> {
-  const response = await fetch(`${apiBaseUrl}/api/event-timeline`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ people }),
-    signal,
-  })
+  const response = await postJson('/api/event-timeline', { people }, signal)
 
   if (!response.ok) {
     throw new Error('Unable to load event timeline.')
@@ -103,12 +119,11 @@ export async function fetchReachableAreas(
   eventStartTime?: string,
   signal?: AbortSignal,
 ): Promise<ReachableAreaResponse> {
-  const response = await fetch(`${apiBaseUrl}/api/reachable-areas`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ people, ...(eventStartTime ? { event_start_time: eventStartTime } : {}) }),
+  const response = await postJson(
+    '/api/reachable-areas',
+    { people, ...(eventStartTime ? { event_start_time: eventStartTime } : {}) },
     signal,
-  })
+  )
 
   if (!response.ok) {
     throw new Error('Unable to load reachable areas.')
@@ -122,12 +137,7 @@ export async function fetchSolveRestaurants(
   overlap: GeoJsonGeometry,
   signal?: AbortSignal,
 ): Promise<SolveRestaurantsResponse> {
-  const response = await fetch(`${apiBaseUrl}/api/solve-restaurants`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ people, overlap }),
-    signal,
-  })
+  const response = await postJson('/api/solve-restaurants', { people, overlap }, signal)
 
   if (!response.ok) {
     throw new Error('Unable to start restaurant solver.')

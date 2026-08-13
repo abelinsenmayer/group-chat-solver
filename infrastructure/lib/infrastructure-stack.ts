@@ -45,25 +45,57 @@ export class InfrastructureStack extends cdk.Stack {
       invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
     });
 
+    // Our AWS account has a CloudFront pricing plan subscription, which requires every
+    // distribution to have a web ACL and — per AWS — that web ACL can't be removed or swapped
+    // for a different one while the plan is active; only pay-as-you-go pricing allows that. AWS
+    // auto-created and attached "CreatedByCloudFront-db4ee948" to this distribution out of band.
+    // Since our CDK code didn't reference it, CloudFormation's desired state had no WebACLId and
+    // tried to remove it on deploy, which CloudFront rejects. Creating a *new* web ACL and
+    // attaching it hits the same rejection (that's a swap too) — the only accepted value is this
+    // exact, already-associated web ACL, so we reference it by ARN instead of managing it here.
+    const existingPricingPlanWebAclArn = cdk.Arn.format(
+      {
+        service: 'wafv2',
+        region: 'us-east-1',
+        resource: 'global/webacl',
+        resourceName: 'CreatedByCloudFront-db4ee948/a353fb4b-c215-4780-8326-6b2e4ce9db55',
+      },
+      this,
+    );
+
     this.distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultRootObject: 'index.html',
+      webAclId: existingPricingPlanWebAclArn,
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(this.siteBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
       additionalBehaviors: {
         '/api/*': {
-          origin: origins.FunctionUrlOrigin.withOriginAccessControl(this.backendFunctionUrl),
+          origin: origins.FunctionUrlOrigin.withOriginAccessControl(this.backendFunctionUrl, {
+            // SSE runs can be idle while LangGraph/LLM work is happening. Keep the
+            // CloudFront->Lambda connection alive long enough for those gaps.
+            readTimeout: cdk.Duration.seconds(60),
+            keepaliveTimeout: cdk.Duration.seconds(60),
+            responseCompletionTimeout: cdk.Duration.minutes(15),
+          }),
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
         },
       },
-      errorResponses: [
-        { httpStatus: 403, responseHttpStatus: 200, responsePagePath: '/index.html' },
-        { httpStatus: 404, responseHttpStatus: 200, responsePagePath: '/index.html' },
-      ],
+
+    });
+
+    // origins.FunctionUrlOrigin.withOriginAccessControl() only grants CloudFront's OAC
+    // lambda:InvokeFunctionUrl. When the distribution invokes the function via the Lambda
+    // integration (rather than the Function URL directly), it needs lambda:InvokeFunction too,
+    // scoped to this specific distribution.
+    this.backendFunction.addPermission('AllowCloudFrontServicePrincipalInvokeFunction', {
+      action: 'lambda:InvokeFunction',
+      principal: new iam.ServicePrincipal('cloudfront.amazonaws.com'),
+      sourceArn: `arn:aws:cloudfront::${this.account}:distribution/${this.distribution.distributionId}`,
     });
 
     new s3deploy.BucketDeployment(this, 'DeployFrontend', {

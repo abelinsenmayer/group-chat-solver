@@ -26,7 +26,7 @@ test('renders the optimized event and person availability timelines', async () =
 
   render(<EventTimelinePage people={[elena]} onBack={vi.fn()} onNext={vi.fn()} />)
 
-  expect(await screen.findByRole('heading', { name: 'Event Timeline Optimizer' })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'When should we meet?' })).toBeInTheDocument()
   expect(screen.getByText('6:00 PM–7:00 PM')).toBeInTheDocument()
   expect(screen.getByText('Elena')).toBeInTheDocument()
   expect(screen.getByText('5:30 PM–8:00 PM')).toBeInTheDocument()
@@ -44,7 +44,7 @@ test('uses singular copy when only one person is in the simulation', async () =>
   render(<EventTimelinePage people={[elena]} onBack={vi.fn()} onNext={vi.fn()} />)
 
   expect(
-    await screen.findByText("We found the event time that gives you the most time to reach a place you'll enjoy."),
+    await screen.findByText('We found the event time that gives everyone the most time to reach a place they can enjoy.'),
   ).toBeInTheDocument()
 })
 
@@ -97,7 +97,7 @@ test('shows a help button that opens an explanation dialog', async () => {
   const user = userEvent.setup()
 
   render(<EventTimelinePage people={[elena]} onBack={vi.fn()} onNext={vi.fn()} />)
-  await screen.findByRole('heading', { name: 'Event Timeline Optimizer' })
+  await screen.findByRole('heading', { name: 'When should we meet?' })
 
   const helpButton = screen.getByRole('button', { name: /what's happening here\?/i })
   expect(helpButton).toBeInTheDocument()

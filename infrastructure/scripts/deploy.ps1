@@ -13,7 +13,7 @@ $mapboxPublicToken = aws ssm get-parameter `
   --output text
 
 Write-Host "Building frontend..."
-Push-Location "$root\frontend"
+Push-Location "$root\..\frontend"
 try {
     $env:VITE_MAPBOX_ACCESS_TOKEN = $mapboxPublicToken
     $env:VITE_API_BASE_URL = ""
@@ -25,7 +25,7 @@ try {
 }
 
 Write-Host "Deploying CDK stack..."
-Push-Location "$root\infrastructure"
+Push-Location "$root"
 try {
     npx cdk deploy --require-approval never
 } finally {

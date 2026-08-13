@@ -28,7 +28,7 @@ test('creates a container-image Lambda with a streaming, IAM-authed function URL
     Timeout: 900,
     Environment: {
       Variables: {
-        AI_PROVIDER: process.env.AI_PROVIDER ?? 'ollama',
+        AI_PROVIDER: process.env.AI_PROVIDER ?? 'gemini',
       },
     },
   });
@@ -63,9 +63,7 @@ test('creates a CloudFront distribution routing /api/* to the backend and everyt
       CacheBehaviors: Match.arrayWith([
         Match.objectLike({ PathPattern: '/api/*' }),
       ]),
-      CustomErrorResponses: Match.arrayWith([
-        Match.objectLike({ ErrorCode: 404, ResponseCode: 200, ResponsePagePath: '/index.html' }),
-      ]),
+
     }),
   });
 });

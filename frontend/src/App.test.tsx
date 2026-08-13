@@ -107,7 +107,7 @@ test('shows the event timeline after selecting a person', async () => {
   await user.click(await screen.findByRole('button', { name: /elena/i }))
   await user.click(screen.getByRole('button', { name: /next/i }))
 
-  expect(await screen.findByRole('heading', { name: /event timeline optimizer/i })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: /when should we meet\?/i })).toBeInTheDocument()
 })
 
 test('does not refetch the timeline when navigating back from the map', async () => {
@@ -149,12 +149,12 @@ test('does not refetch the timeline when navigating back from the map', async ()
 
   await user.click(await screen.findByRole('button', { name: /elena/i }))
   await user.click(screen.getByRole('button', { name: /next/i }))
-  await screen.findByRole('heading', { name: /event timeline optimizer/i })
+  await screen.findByRole('heading', { name: /when should we meet\?/i })
   await user.click(screen.getByRole('button', { name: /next/i }))
-  await screen.findByRole('heading', { name: /reachable area map/i })
+  await screen.findByRole('heading', { name: /where can everyone meet\?/i })
 
   await user.click(screen.getByRole('button', { name: /back/i }))
-  await screen.findByRole('heading', { name: /event timeline optimizer/i })
+  await screen.findByRole('heading', { name: /when should we meet\?/i })
 
   expect(eventTimelineCalls).toBe(1)
 })
@@ -199,21 +199,21 @@ test('resets the restaurant solver to its initial state when navigating back the
 
   await user.click(await screen.findByRole('button', { name: /elena/i }))
   await user.click(screen.getByRole('button', { name: /next/i }))
-  await screen.findByRole('heading', { name: /event timeline optimizer/i })
+  await screen.findByRole('heading', { name: /when should we meet\?/i })
   await user.click(screen.getByRole('button', { name: /next/i }))
-  await screen.findByRole('heading', { name: /reachable area map/i })
+  await screen.findByRole('heading', { name: /where can everyone meet\?/i })
   await user.click(screen.getByRole('button', { name: /next/i }))
-  await screen.findByRole('heading', { name: /meet the agents/i })
+  await screen.findByRole('heading', { name: /how will we find a restaurant\?/i })
   await user.click(screen.getByRole('button', { name: /next/i }))
-  await screen.findByRole('heading', { name: /the conversation/i })
+  await screen.findByRole('heading', { name: /let's find a restaurant!/i })
 
   await user.click(screen.getByRole('button', { name: /start simulation/i }))
   await act(async () => {})
 
   await user.click(screen.getByRole('button', { name: /back/i }))
-  await screen.findByRole('heading', { name: /meet the agents/i })
+  await screen.findByRole('heading', { name: /how will we find a restaurant\?/i })
   await user.click(screen.getByRole('button', { name: /next/i }))
-  await screen.findByRole('heading', { name: /the conversation/i })
+  await screen.findByRole('heading', { name: /let's find a restaurant!/i })
 
   expect(await screen.findByRole('button', { name: /start simulation/i })).toBeInTheDocument()
 })

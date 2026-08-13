@@ -1,6 +1,7 @@
 import asyncio
 import importlib.util
 import json
+import queue
 from datetime import datetime
 from pathlib import Path
 
@@ -93,10 +94,16 @@ async def stream_solve_restaurants_events(run_id: str) -> StreamingResponse:
     except KeyError as error:
         raise HTTPException(status_code=404, detail="Unknown run_id") from error
 
+    KEEPALIVE_INTERVAL = 20.0
+
     async def event_stream():
         try:
             while True:
-                item = await asyncio.to_thread(run_queue.get)
+                try:
+                    item = await asyncio.to_thread(run_queue.get, timeout=KEEPALIVE_INTERVAL)
+                except queue.Empty:
+                    yield ":keepalive\n\n"
+                    continue
                 if item is events.SENTINEL:
                     break
                 yield f"data: {json.dumps(item)}\n\n"

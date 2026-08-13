@@ -44,7 +44,7 @@ test('posts selected people to the event timeline endpoint', async () => {
   await expect(fetchEventTimeline(people)).resolves.toEqual(response)
   expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:8000/api/event-timeline', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-amz-content-sha256': expect.any(String) },
     body: JSON.stringify({ people }),
     signal: undefined,
   })
@@ -64,7 +64,7 @@ test('posts selected people to the reachable areas endpoint', async () => {
   await expect(fetchReachableAreas(people)).resolves.toEqual(response)
   expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:8000/api/reachable-areas', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-amz-content-sha256': expect.any(String) },
     body: JSON.stringify({ people }),
     signal: undefined,
   })
