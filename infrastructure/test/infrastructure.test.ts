@@ -60,8 +60,15 @@ test('creates a CloudFront distribution routing /api/* to the backend and everyt
   template.hasResourceProperties('AWS::CloudFront::Distribution', {
     DistributionConfig: Match.objectLike({
       DefaultRootObject: 'index.html',
+      Comment: 'Conversation Solver Distirbution',
+      DefaultCacheBehavior: Match.objectLike({
+        CachePolicyId: '658327ea-f89d-4fab-a63d-7e88639e58f6',
+      }),
       CacheBehaviors: Match.arrayWith([
-        Match.objectLike({ PathPattern: '/api/*' }),
+        Match.objectLike({
+          PathPattern: '/api/*',
+          CachePolicyId: '658327ea-f89d-4fab-a63d-7e88639e58f6',
+        }),
       ]),
 
     }),
@@ -72,4 +79,22 @@ test('deploys the built frontend to the site bucket and invalidates CloudFront',
   const template = synthTemplate();
 
   template.resourceCountIs('Custom::CDKBucketDeployment', 1);
+});
+
+test('creates a CloudWatch alarm that notifies an SNS topic on Lambda throttles', () => {
+  const template = synthTemplate();
+
+  template.hasResourceProperties('AWS::SNS::Topic', {
+    TopicName: 'group-chat-solver-lambda-alarms',
+  });
+
+  template.hasResourceProperties('AWS::CloudWatch::Alarm', {
+    Namespace: 'AWS/Lambda',
+    MetricName: 'Throttles',
+    Statistic: 'Sum',
+    Threshold: 1,
+    EvaluationPeriods: 1,
+    ComparisonOperator: 'GreaterThanOrEqualToThreshold',
+    AlarmActions: Match.arrayWith([Match.objectLike({})]),
+  });
 });

@@ -7,12 +7,16 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as cloudwatchActions from 'aws-cdk-lib/aws-cloudwatch-actions';
+import * as sns from 'aws-cdk-lib/aws-sns';
 
 export class InfrastructureStack extends cdk.Stack {
   public readonly siteBucket: s3.Bucket;
   public readonly backendFunction: lambda.DockerImageFunction;
   public readonly backendFunctionUrl: lambda.FunctionUrl;
   public readonly distribution: cloudfront.Distribution;
+  public readonly alarmTopic: sns.Topic;
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -45,6 +49,27 @@ export class InfrastructureStack extends cdk.Stack {
       invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
     });
 
+    // Notifies subscribers (e.g. email, Slack) when the backend Lambda is throttled.
+    // Subscriptions aren't managed here; add them out-of-band (e.g. via the console or a
+    // separate `sns.Subscription`) once the topic ARN is available.
+    this.alarmTopic = new sns.Topic(this, 'LambdaAlarmTopic', {
+      topicName: 'group-chat-solver-lambda-alarms',
+      displayName: 'Group Chat Solver Lambda Alarms',
+    });
+
+    const throttleAlarm = new cloudwatch.Alarm(this, 'BackendFunctionThrottleAlarm', {
+      alarmDescription: 'Alerts when the backend Lambda function is throttled.',
+      metric: this.backendFunction.metricThrottles({
+        period: cdk.Duration.minutes(5),
+        statistic: 'sum',
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+    throttleAlarm.addAlarmAction(new cloudwatchActions.SnsAction(this.alarmTopic));
+
     // Our AWS account has a CloudFront pricing plan subscription, which requires every
     // distribution to have a web ACL and — per AWS — that web ACL can't be removed or swapped
     // for a different one while the plan is active; only pay-as-you-go pricing allows that. AWS
@@ -65,10 +90,12 @@ export class InfrastructureStack extends cdk.Stack {
 
     this.distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultRootObject: 'index.html',
+      comment: 'Conversation Solver Distirbution',
       webAclId: existingPricingPlanWebAclArn,
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(this.siteBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
       },
       additionalBehaviors: {
         '/api/*': {
@@ -81,7 +108,7 @@ export class InfrastructureStack extends cdk.Stack {
           }),
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
           originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
         },
       },
