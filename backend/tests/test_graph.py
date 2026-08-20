@@ -1,6 +1,6 @@
 import asyncio
 from datetime import time
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from src.solve_restaurants import events
 from src.solve_restaurants.graph import create_graph, run_solve_restaurants, start_solve_restaurants
@@ -29,16 +29,22 @@ def test_graph_runs_to_consensus_with_mocks():
         id="r1", name="Veggie Spot", address="1 Main", coordinates=(-73.0, 40.0), mapbox_feature={}
     )
 
-    with patch("src.solve_restaurants.graph.planner") as mock_planner:
-        mock_planner.return_value = {"suggestions": [suggestion], "verdicts": {}, "logs": []}
-        with patch("src.solve_restaurants.graph.judge") as mock_judge:
-            mock_judge.return_value = {
-                "verdicts": {
-                    "A": {"r1": JudgeVerdict(verdict=Verdict.APPROVED)},
-                    "B": {"r1": JudgeVerdict(verdict=Verdict.APPROVED)},
-                },
-                "logs": [],
-            }
+    with patch(
+        "src.solve_restaurants.graph.planner",
+        new=AsyncMock(return_value={"suggestions": [suggestion], "verdicts": {}, "logs": []}),
+    ):
+        with patch(
+            "src.solve_restaurants.graph.judge",
+            new=AsyncMock(
+                return_value={
+                    "verdicts": {
+                        "A": {"r1": JudgeVerdict(verdict=Verdict.APPROVED)},
+                        "B": {"r1": JudgeVerdict(verdict=Verdict.APPROVED)},
+                    },
+                    "logs": [],
+                }
+            ),
+        ):
             with patch("src.solve_restaurants.graph.run_logger.save_run") as mock_save:
                 events.create_run("run-1")
                 final_state = asyncio.run(run_solve_restaurants(people, overlap, "run-1"))
@@ -62,15 +68,17 @@ def test_run_solve_restaurants_passes_run_id_into_state_and_send_payload():
 
     seen_run_ids = []
 
-    def fake_judge(payload):
+    async def fake_judge(payload):
         seen_run_ids.append(payload["run_id"])
         return {
             "verdicts": {"A": {"r1": JudgeVerdict(verdict=Verdict.APPROVED)}},
             "logs": [],
         }
 
-    with patch("src.solve_restaurants.graph.planner") as mock_planner:
-        mock_planner.return_value = {"suggestions": [suggestion], "verdicts": {}, "logs": []}
+    with patch(
+        "src.solve_restaurants.graph.planner",
+        new=AsyncMock(return_value={"suggestions": [suggestion], "verdicts": {}, "logs": []}),
+    ):
         with patch("src.solve_restaurants.graph.judge", side_effect=fake_judge):
             with patch("src.solve_restaurants.graph.run_logger.save_run"):
                 events.create_run("run-2")
@@ -90,7 +98,7 @@ def test_run_solve_restaurants_emits_no_restaurants_found_when_planner_finds_non
 
     emitted = []
 
-    def fake_planner(_state):
+    async def fake_planner(_state):
         raise NoRestaurantsFoundError("No restaurants found")
 
     with patch("src.solve_restaurants.graph.events.emit", side_effect=lambda run_id, event: emitted.append((run_id, event))):
@@ -117,7 +125,10 @@ def test_start_solve_restaurants_uses_the_same_run_id_for_events_and_return_valu
     }
 
     async def _start():
-        with patch("src.solve_restaurants.graph.run_solve_restaurants") as mock_run:
+        with patch(
+            "src.solve_restaurants.graph.run_solve_restaurants",
+            new=AsyncMock(),
+        ) as mock_run:
             run_id, task = start_solve_restaurants(people, overlap)
             task.cancel()
 

@@ -1,5 +1,6 @@
+import asyncio
 from datetime import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
@@ -15,6 +16,10 @@ from src.solve_restaurants.planner import (
 )
 from src.solve_restaurants.state import SolveRestaurantsState, person_to_payload
 from src.person import Person
+
+
+def _run__run_planner(state):
+    return asyncio.run(_run_planner(state))
 
 
 def test_search_restaurants_tool_formats_results():
@@ -89,8 +94,8 @@ def test_planner_returns_agent_selected_suggestions():
         for i in range(3)
     ]
 
-    mock_agent = MagicMock()
-    mock_agent.invoke.return_value = {
+    mock_agent = MagicMock(ainvoke=AsyncMock())
+    mock_agent.ainvoke.return_value = {
         "structured_response": SuggestionSelection(selected=selected_from_llm)
     }
 
@@ -104,7 +109,7 @@ def test_planner_returns_agent_selected_suggestions():
             with patch(
                 "src.solve_restaurants.planner.create_agent", side_effect=fake_create_agent
             ) as mock_create_agent:
-                result = planner(state)
+                result = _run_planner(state)
 
     mock_create_agent.assert_called_once()
     _, kwargs = mock_create_agent.call_args
@@ -141,8 +146,8 @@ def test_planner_skips_selections_with_unknown_mapbox_id():
         ),
     ]
 
-    mock_agent = MagicMock()
-    mock_agent.invoke.return_value = {
+    mock_agent = MagicMock(ainvoke=AsyncMock())
+    mock_agent.ainvoke.return_value = {
         "structured_response": SuggestionSelection(selected=selected_from_llm)
     }
 
@@ -153,7 +158,7 @@ def test_planner_skips_selections_with_unknown_mapbox_id():
     with patch("src.solve_restaurants.planner.find_pois_in_polygon", return_value=raw_features):
         with patch("src.solve_restaurants.planner.get_chat_llm"):
             with patch("src.solve_restaurants.planner.create_agent", side_effect=fake_create_agent):
-                result = planner(state)
+                result = _run_planner(state)
 
     assert len(result["suggestions"]) == 1
     assert result["suggestions"][0].id == "r0"
@@ -219,9 +224,9 @@ def test_planner_recovers_structured_response_when_agent_returns_none():
         ],
     )
 
-    mock_agent = MagicMock()
+    mock_agent = MagicMock(ainvoke=AsyncMock())
     # No "structured_response" key at all - this is the bug being reproduced.
-    mock_agent.invoke.return_value = {
+    mock_agent.ainvoke.return_value = {
         "messages": [HumanMessage(content="Find restaurants."), buggy_ai_message]
     }
 
@@ -232,7 +237,7 @@ def test_planner_recovers_structured_response_when_agent_returns_none():
     with patch("src.solve_restaurants.planner.find_pois_in_polygon", return_value=raw_features):
         with patch("src.solve_restaurants.planner.get_chat_llm"):
             with patch("src.solve_restaurants.planner.create_agent", side_effect=fake_create_agent):
-                result = planner(state)
+                result = _run_planner(state)
 
     assert len(result["suggestions"]) == 1
     assert result["suggestions"][0].id == "mapbox_id_1"
@@ -260,8 +265,8 @@ def test_planner_emits_started_and_suggestions_events():
         SelectedSuggestion(id="r0", name="Restaurant 0", address="0 Main St", coordinates=(-73.0, 40.0))
     ]
 
-    mock_agent = MagicMock()
-    mock_agent.invoke.return_value = {
+    mock_agent = MagicMock(ainvoke=AsyncMock())
+    mock_agent.ainvoke.return_value = {
         "structured_response": SuggestionSelection(selected=selected_from_llm)
     }
 
@@ -277,7 +282,7 @@ def test_planner_emits_started_and_suggestions_events():
         with patch("src.solve_restaurants.planner.find_pois_in_polygon", return_value=raw_features):
             with patch("src.solve_restaurants.planner.get_chat_llm"):
                 with patch("src.solve_restaurants.planner.create_agent", side_effect=fake_create_agent):
-                    planner(state)
+                    _run_planner(state)
 
     assert emitted[0] == ("run-1", {"type": "planner_started", "round": 2})
     assert emitted[1] == (
@@ -300,13 +305,13 @@ def test_planner_raises_when_no_suggestions_selected():
     }
     state = SolveRestaurantsState(people=people, overlap=overlap)
 
-    mock_agent = MagicMock()
-    mock_agent.invoke.return_value = {"structured_response": SuggestionSelection(selected=[])}
+    mock_agent = MagicMock(ainvoke=AsyncMock())
+    mock_agent.ainvoke.return_value = {"structured_response": SuggestionSelection(selected=[])}
 
     with patch("src.solve_restaurants.planner.get_chat_llm"):
         with patch("src.solve_restaurants.planner.create_agent", return_value=mock_agent):
             with pytest.raises(NoRestaurantsFoundError):
-                planner(state)
+                _run_planner(state)
 
 
 def test_search_restaurants_tool_filters_excluded_ids():
@@ -386,8 +391,8 @@ def test_planner_skips_previously_selected_ids_and_returns_them():
         SelectedSuggestion(id="r1", name="Restaurant 1", address="1 Main St", coordinates=(-73.0, 40.0)),
     ]
 
-    mock_agent = MagicMock()
-    mock_agent.invoke.return_value = {
+    mock_agent = MagicMock(ainvoke=AsyncMock())
+    mock_agent.ainvoke.return_value = {
         "structured_response": SuggestionSelection(selected=selected_from_llm)
     }
 
@@ -400,7 +405,7 @@ def test_planner_skips_previously_selected_ids_and_returns_them():
             with patch(
                 "src.solve_restaurants.planner.create_agent", side_effect=fake_create_agent
             ):
-                result = planner(state)
+                result = _run_planner(state)
 
     assert len(result["suggestions"]) == 1
     assert result["suggestions"][0].id == "r1"

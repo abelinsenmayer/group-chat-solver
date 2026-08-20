@@ -126,3 +126,18 @@ def test_reachable_areas_endpoint_rejects_empty_people():
     response = TestClient(app).post("/api/reachable-areas", json={"people": []})
 
     assert response.status_code == 422
+
+
+def test_event_timeline_preflight_allows_frontend_headers():
+    response = TestClient(app).options(
+        "/api/event-timeline",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type, x-amz-content-sha256",
+        },
+    )
+
+    assert response.status_code == 200
+    allowed_headers = response.headers.get("access-control-allow-headers", "")
+    assert "x-amz-content-sha256" in allowed_headers

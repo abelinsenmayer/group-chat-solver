@@ -46,3 +46,17 @@ def test_solve_restaurants_events_streams_emitted_events():
 def test_solve_restaurants_events_returns_404_for_unknown_run_id():
     response = client.get("/api/solve-restaurants/unknown-run/events")
     assert response.status_code == 404
+
+
+def test_solve_restaurants_events_calls_cancel_on_disconnect():
+    events.create_run("run-cancel-2")
+    events.emit("run-cancel-2", {"type": "planner_started", "round": 1})
+
+    with patch("src.api.cancel_solve_restaurants") as mock_cancel:
+        with client.stream("GET", "/api/solve-restaurants/run-cancel-2/events") as response:
+            for chunk in response.iter_text():
+                if "planner_started" in chunk:
+                    break
+
+    assert mock_cancel.call_args == (("run-cancel-2",),)
+    events.discard("run-cancel-2")

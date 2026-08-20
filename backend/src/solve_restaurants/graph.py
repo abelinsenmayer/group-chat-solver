@@ -16,6 +16,19 @@ from .success_check import route_after_success_check, success_check
 
 logger = logging.getLogger(__name__)
 
+_tasks: dict[str, asyncio.Task] = {}
+
+
+def _remove_task(run_id: str, task: asyncio.Task) -> None:
+    _tasks.pop(run_id, None)
+    try:
+        if not task.cancelled():
+            exc = task.exception()
+            if exc is not None:
+                logger.exception("solve-restaurants run %s failed", run_id, exc_info=exc)
+    except (asyncio.CancelledError, asyncio.InvalidStateError):
+        pass
+
 
 def create_graph():
     builder = StateGraph(SolveRestaurantsState)
@@ -62,6 +75,9 @@ async def run_solve_restaurants(people: list[Person], overlap: dict, run_id: str
     try:
         final_state_dict = await graph.ainvoke(initial_state)
         final_state = SolveRestaurantsState.model_validate(final_state_dict)
+    except asyncio.CancelledError:
+        logger.info("solve-restaurants run %s was cancelled", run_id)
+        raise
     except NoRestaurantsFoundError as error:
         logger.info("No restaurants found for run %s: %s", run_id, error)
         final_state = SolveRestaurantsState.model_validate(initial_state.model_dump())
@@ -75,6 +91,7 @@ async def run_solve_restaurants(people: list[Person], overlap: dict, run_id: str
         events.emit(run_id, {"type": "error", "message": str(error)})
         raise
     finally:
+        _tasks.pop(run_id, None)
         events.close_run(run_id)
     if final_state is None:
         raise RuntimeError(f"solve-restaurants run {run_id} did not produce a final state")
@@ -87,4 +104,15 @@ def start_solve_restaurants(people: list[Person], overlap: dict) -> tuple[str, a
     run_id = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
     events.create_run(run_id)
     task = asyncio.create_task(run_solve_restaurants(people, overlap, run_id))
+    _tasks[run_id] = task
+    task.add_done_callback(lambda t, rid=run_id: _remove_task(rid, t))
     return run_id, task
+
+
+def cancel_solve_restaurants(run_id: str) -> bool:
+    """Cancel the running solve-restaurants task for a run, if any."""
+    task = _tasks.get(run_id)
+    if task is None or task.done():
+        return False
+    task.cancel()
+    return True

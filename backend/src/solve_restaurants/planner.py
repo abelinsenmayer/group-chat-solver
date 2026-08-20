@@ -106,7 +106,7 @@ class SuggestionSelection(BaseModel):
     selected: list[SelectedSuggestion]
 
 
-def planner(state) -> dict:
+async def planner(state) -> dict:
     events.emit(state.run_id, {"type": "planner_started", "round": state.round})
     settings = get_settings()
     polygon_coords = _extract_exterior_ring(state.overlap)
@@ -126,7 +126,7 @@ def planner(state) -> dict:
         middleware=[ToolCallLimitMiddleware(tool_name="search_restaurants", run_limit=3)],
         response_format=SuggestionSelection,
     )
-    result = agent.invoke(
+    result = await agent.ainvoke(
         {
             "messages": [
                 {

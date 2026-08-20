@@ -39,7 +39,7 @@ def _create_web_search_tool(client: TavilyClient):
     return web_search
 
 
-def judge(payload: dict) -> dict:
+async def judge(payload: dict) -> dict:
     run_id = payload.get("run_id", "")
     person = PersonPayload.model_validate(payload["person"])
     suggestions = [RestaurantSuggestion.model_validate(s) for s in payload["suggestions"]]
@@ -61,7 +61,7 @@ def judge(payload: dict) -> dict:
             response_format=JudgeVerdict,
         )
         try:
-            result = agent.invoke(
+            result = await agent.ainvoke(
                 {
                     "messages": [
                         {

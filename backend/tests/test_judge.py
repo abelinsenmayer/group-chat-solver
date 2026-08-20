@@ -1,11 +1,16 @@
+import asyncio
 from datetime import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from langchain_core.messages import AIMessage, HumanMessage
 
 from src.solve_restaurants.judge import _create_web_search_tool, judge
 from src.solve_restaurants.state import JudgeVerdict, RestaurantSuggestion, Verdict, person_to_payload
 from src.person import Person
+
+
+def _run__run_judge(payload):
+    return asyncio.run(_run_judge(payload))
 
 
 def _person():
@@ -44,8 +49,8 @@ def test_judge_approves_suggestion_when_agent_returns_approved():
     person = _person()
     suggestion = _suggestion()
 
-    mock_agent = MagicMock()
-    mock_agent.invoke.return_value = {
+    mock_agent = MagicMock(ainvoke=AsyncMock())
+    mock_agent.ainvoke.return_value = {
         "structured_response": JudgeVerdict(verdict=Verdict.APPROVED, feedback=None)
     }
 
@@ -54,7 +59,7 @@ def test_judge_approves_suggestion_when_agent_returns_approved():
             with patch(
                 "src.solve_restaurants.judge.create_agent", return_value=mock_agent
             ) as mock_create_agent:
-                result = judge({"person": person.model_dump(), "suggestions": [suggestion.model_dump()]})
+                result = _run_judge({"person": person.model_dump(), "suggestions": [suggestion.model_dump()]})
 
     mock_create_agent.assert_called_once()
     _, kwargs = mock_create_agent.call_args
@@ -69,13 +74,13 @@ def test_judge_rejects_and_logs_error_on_agent_exception():
     person = _person()
     suggestion = _suggestion()
 
-    mock_agent = MagicMock()
-    mock_agent.invoke.side_effect = RuntimeError("agent exploded")
+    mock_agent = MagicMock(ainvoke=AsyncMock())
+    mock_agent.ainvoke.side_effect = RuntimeError("agent exploded")
 
     with patch("src.solve_restaurants.judge.TavilyClient"):
         with patch("src.solve_restaurants.judge.get_chat_llm"):
             with patch("src.solve_restaurants.judge.create_agent", return_value=mock_agent):
-                result = judge({"person": person.model_dump(), "suggestions": [suggestion.model_dump()]})
+                result = _run_judge({"person": person.model_dump(), "suggestions": [suggestion.model_dump()]})
 
     verdict = result["verdicts"]["A"]["r1"]
     assert verdict.verdict == Verdict.REJECTED
@@ -88,8 +93,8 @@ def test_judge_emits_evaluating_and_verdict_events():
     person = _person()
     suggestion = _suggestion()
 
-    mock_agent = MagicMock()
-    mock_agent.invoke.return_value = {
+    mock_agent = MagicMock(ainvoke=AsyncMock())
+    mock_agent.ainvoke.return_value = {
         "structured_response": JudgeVerdict(
             verdict=Verdict.REJECTED, short_reason="Too expensive!", feedback="Prices are high for this budget."
         )
@@ -103,7 +108,7 @@ def test_judge_emits_evaluating_and_verdict_events():
         with patch("src.solve_restaurants.judge.TavilyClient"):
             with patch("src.solve_restaurants.judge.get_chat_llm"):
                 with patch("src.solve_restaurants.judge.create_agent", return_value=mock_agent):
-                    judge(
+                    _run_judge(
                         {
                             "run_id": "run-1",
                             "person": person.model_dump(),
@@ -129,8 +134,8 @@ def test_judge_defaults_run_id_when_missing_from_payload():
     person = _person()
     suggestion = _suggestion()
 
-    mock_agent = MagicMock()
-    mock_agent.invoke.return_value = {
+    mock_agent = MagicMock(ainvoke=AsyncMock())
+    mock_agent.ainvoke.return_value = {
         "structured_response": JudgeVerdict(verdict=Verdict.APPROVED)
     }
 
@@ -138,7 +143,7 @@ def test_judge_defaults_run_id_when_missing_from_payload():
         with patch("src.solve_restaurants.judge.TavilyClient"):
             with patch("src.solve_restaurants.judge.get_chat_llm"):
                 with patch("src.solve_restaurants.judge.create_agent", return_value=mock_agent):
-                    judge({"person": person.model_dump(), "suggestions": [suggestion.model_dump()]})
+                    _run_judge({"person": person.model_dump(), "suggestions": [suggestion.model_dump()]})
 
     assert mock_emit.call_args_list[0].args[0] == ""
 
@@ -176,15 +181,15 @@ def test_judge_recovers_structured_response_when_agent_returns_none():
         ],
     )
 
-    mock_agent = MagicMock()
-    mock_agent.invoke.return_value = {
+    mock_agent = MagicMock(ainvoke=AsyncMock())
+    mock_agent.ainvoke.return_value = {
         "messages": [HumanMessage(content="Judge this restaurant."), buggy_ai_message]
     }
 
     with patch("src.solve_restaurants.judge.TavilyClient"):
         with patch("src.solve_restaurants.judge.get_chat_llm"):
             with patch("src.solve_restaurants.judge.create_agent", return_value=mock_agent):
-                result = judge({"person": person.model_dump(), "suggestions": [suggestion.model_dump()]})
+                result = _run_judge({"person": person.model_dump(), "suggestions": [suggestion.model_dump()]})
 
     verdict = result["verdicts"]["A"]["r1"]
     assert verdict.verdict == Verdict.REJECTED
