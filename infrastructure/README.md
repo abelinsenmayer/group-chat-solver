@@ -5,9 +5,6 @@ distribution serving the built React SPA from S3, and routing `/api/*` to a
 containerized FastAPI backend running on a Lambda Function URL
 (response-streaming, for the multi-minute SSE `solve-restaurants` run).
 
-See `docs/superpowers/specs/2026-08-11-aws-infrastructure-design.md` for the
-full design rationale.
-
 ## Prerequisites
 
 - AWS CLI configured with credentials for the target account (`aws sts get-caller-identity` should succeed)
@@ -39,6 +36,25 @@ frontend build. `google-api-key` is only required when `AI_PROVIDER` is set to
 ```powershell
 cd infrastructure
 npm install
+```
+
+## Tests
+
+Unit tests assert on the synthesized CloudFormation template (bucket policies, Lambda config, alarms, etc.) using `aws-cdk-lib/assertions`:
+
+```powershell
+cd infrastructure
+npm test
+```
+
+## Synth / diff
+
+Inspect the CloudFormation template that would be generated, or diff it against what's currently deployed, without deploying:
+
+```powershell
+cd infrastructure
+npx cdk synth
+npx cdk diff
 ```
 
 ## Deploy

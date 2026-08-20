@@ -61,6 +61,15 @@ test('creates a CloudFront distribution routing /api/* to the backend and everyt
     DistributionConfig: Match.objectLike({
       DefaultRootObject: 'index.html',
       Comment: 'Conversation Solver Distirbution',
+      Aliases: Match.arrayWith([
+        'abelinsenmayer.dev',
+        '*.abelinsenmayer.dev',
+      ]),
+      ViewerCertificate: Match.objectLike({
+        AcmCertificateArn: 'arn:aws:acm:us-east-1:611052934789:certificate/5081faf8-ec83-4201-b521-a74fb7cb25c6',
+        SslSupportMethod: 'sni-only',
+        MinimumProtocolVersion: 'TLSv1.2_2021',
+      }),
       DefaultCacheBehavior: Match.objectLike({
         CachePolicyId: '658327ea-f89d-4fab-a63d-7e88639e58f6',
       }),

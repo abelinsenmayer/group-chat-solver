@@ -4,6 +4,7 @@ import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
@@ -88,10 +89,20 @@ export class InfrastructureStack extends cdk.Stack {
       this,
     );
 
+    const siteCertificate = acm.Certificate.fromCertificateArn(
+      this,
+      'SiteCertificate',
+      'arn:aws:acm:us-east-1:611052934789:certificate/5081faf8-ec83-4201-b521-a74fb7cb25c6',
+    );
+
     this.distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultRootObject: 'index.html',
       comment: 'Conversation Solver Distirbution',
       webAclId: existingPricingPlanWebAclArn,
+      domainNames: ['abelinsenmayer.dev', '*.abelinsenmayer.dev'],
+      certificate: siteCertificate,
+      minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
+      sslSupportMethod: cloudfront.SSLMethod.SNI,
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(this.siteBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
