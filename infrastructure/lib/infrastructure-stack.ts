@@ -109,6 +109,17 @@ export class InfrastructureStack extends cdk.Stack {
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
       },
       additionalBehaviors: {
+        '/api/wakeup': {
+          origin: origins.FunctionUrlOrigin.withOriginAccessControl(this.backendFunctionUrl, {
+            readTimeout: cdk.Duration.seconds(60),
+            keepaliveTimeout: cdk.Duration.seconds(60),
+            responseCompletionTimeout: cdk.Duration.minutes(15),
+          }),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        },
         '/api/*': {
           origin: origins.FunctionUrlOrigin.withOriginAccessControl(this.backendFunctionUrl, {
             // SSE runs can be idle while LangGraph/LLM work is happening. Keep the

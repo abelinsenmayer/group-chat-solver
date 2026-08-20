@@ -7,6 +7,13 @@ from src.api import app
 from src.person import Person
 
 
+def test_wakeup_endpoint_returns_ok():
+    response = TestClient(app).get("/api/wakeup")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def test_people_endpoint_returns_serialized_sample_people():
     response = TestClient(app).get("/api/people")
 

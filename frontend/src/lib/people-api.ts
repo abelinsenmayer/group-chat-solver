@@ -106,8 +106,8 @@ export async function fetchPeople(signal?: AbortSignal): Promise<Person[]> {
 
 export async function wakeUpBackend(signal?: AbortSignal): Promise<void> {
   const response = signal
-    ? await fetch(`${apiBaseUrl}/api/people`, { signal })
-    : await fetch(`${apiBaseUrl}/api/people`)
+    ? await fetch(`${apiBaseUrl}/api/wakeup`, { signal })
+    : await fetch(`${apiBaseUrl}/api/wakeup`)
 
   if (!response.ok) {
     throw new Error('Backend is not ready.')

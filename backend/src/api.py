@@ -113,6 +113,11 @@ async def stream_solve_restaurants_events(run_id: str) -> StreamingResponse:
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
+@app.get("/api/wakeup")
+def wake_up() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 @app.get("/api/people")
 def get_people() -> list[dict[str, object]]:
     return [
