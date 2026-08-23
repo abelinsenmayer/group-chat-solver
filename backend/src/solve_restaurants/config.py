@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     log_dir: str = os.path.join(os.path.dirname(__file__), "..", "..", "logs", "runs")
     dev_mode: bool = True
     log_level: str = "DEBUG"
+    researcher_search_limit: int = 2
     langsmith_tracing: bool = False
     langsmith_api_key: str | None = None
     langsmith_project: str = "group-chat-solver"

@@ -19,7 +19,10 @@ import {
   type SolveRestaurantsResponse,
 } from '../lib/people-api'
 
-const PLANNER_COLOR = '#4A4A4A'
+const PLANNER_COLOR = 'var(--color-planner)'
+const RESEARCHER_COLOR = 'var(--color-researcher)'
+const PLANNER_POSITION = { xPercent: 42, yPercent: 4 }
+const RESEARCHER_POSITION = { xPercent: 58, yPercent: 4 }
 const TRASH_POSITION = { xPercent: 104, yPercent: 50 }
 
 type SolveRestaurantsPageProps = {
@@ -38,11 +41,12 @@ type CardState = {
   phase: 'active' | 'pending-trash' | 'trashed' | 'winner'
 }
 
-type ActiveLine = { person: string; suggestionId: string }
+type ActiveLine = { person: string; suggestionId: string; phase: 'questioning' | 'researching' | 'evaluating' }
 
 type ConversationState = {
   cards: CardState[]
   activeLines: ActiveLine[]
+  researcherActiveSuggestions: Set<string>
   plannerThinking: boolean
   finalStatus: 'consensus' | 'no_consensus' | 'no_restaurants_found' | null
   errorMessage: string | null
@@ -51,6 +55,7 @@ type ConversationState = {
 const initialConversationState: ConversationState = {
   cards: [],
   activeLines: [],
+  researcherActiveSuggestions: new Set(),
   plannerThinking: false,
   finalStatus: null,
   errorMessage: null,
@@ -75,16 +80,43 @@ function conversationReducer(state: ConversationState, event: ConversationAction
         ...state,
         plannerThinking: false,
         activeLines: [],
+        researcherActiveSuggestions: new Set(),
         cards: [
           ...keptCards,
           ...event.suggestions.map((suggestion) => ({ suggestion, verdicts: {}, phase: 'active' as const })),
         ],
       }
     }
+    case 'judge_questioning':
+      return {
+        ...state,
+        activeLines: [
+          ...state.activeLines,
+          { person: event.person, suggestionId: event.suggestion_id, phase: 'questioning' },
+        ],
+      }
+    case 'researcher_started':
+      return {
+        ...state,
+        researcherActiveSuggestions: new Set(state.researcherActiveSuggestions).add(event.suggestion_id),
+        activeLines: state.activeLines.filter(
+          (line) => line.suggestionId !== event.suggestion_id || line.phase !== 'questioning',
+        ),
+      }
+    case 'researcher_done':
+      return {
+        ...state,
+        researcherActiveSuggestions: new Set(
+          [...state.researcherActiveSuggestions].filter((id) => id !== event.suggestion_id),
+        ),
+      }
     case 'judge_evaluating':
       return {
         ...state,
-        activeLines: [...state.activeLines, { person: event.person, suggestionId: event.suggestion_id }],
+        activeLines: [
+          ...state.activeLines,
+          { person: event.person, suggestionId: event.suggestion_id, phase: 'evaluating' },
+        ],
       }
     case 'judge_verdict':
       return {
@@ -124,7 +156,7 @@ function conversationReducer(state: ConversationState, event: ConversationAction
       }
     }
     case 'error':
-      return { ...state, errorMessage: event.message }
+      return { ...state, errorMessage: event.message, activeLines: [], researcherActiveSuggestions: new Set() }
     default:
       return state
   }
@@ -214,6 +246,16 @@ export default function SolveRestaurantsPage({
     .filter((card) => card.phase === 'trashed')
     .map((card) => ({ name: card.suggestion.name, verdicts: card.verdicts }))
 
+  const getActiveResearchLabel = () => {
+    const count = conversation.researcherActiveSuggestions.size
+    if (count === 1) {
+      const firstId = conversation.researcherActiveSuggestions.values().next().value
+      const name = conversation.cards.find((c) => c.suggestion.id === firstId)?.suggestion.name
+      return name ? `Researching ${name}` : 'Researching restaurants'
+    }
+    return `Researching ${count} restaurants`
+  }
+
   return (
     <main className="mx-auto flex h-screen max-w-4xl flex-col bg-background px-6 py-4 text-secondary sm:px-12 sm:py-6">
       <header className="flex shrink-0 flex-wrap items-start justify-between gap-4">
@@ -250,11 +292,30 @@ export default function SolveRestaurantsPage({
             className="relative aspect-square w-full max-h-full max-w-full"
             style={{ maxHeight: '100%', maxWidth: '100%' }}
           >
-            <div className="absolute left-1/2 top-0 flex -translate-x-1/2 flex-col items-center">
-              {conversation.plannerThinking && <ThoughtBubble text="Brainstorming restaurant ideas" />}
+            <div
+              data-agent-wrapper="planner"
+              className="absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+              style={{ left: `${PLANNER_POSITION.xPercent}%`, top: `${PLANNER_POSITION.yPercent}%` }}
+            >
+              {conversation.plannerThinking && (
+                <ThoughtBubble text="Brainstorming restaurant ideas" placement="below" />
+              )}
               <CircleUserRound size={48} strokeWidth={1.5} color={PLANNER_COLOR} aria-label="Planner" />
               <span className="text-sm font-bold" style={{ color: PLANNER_COLOR }}>
                 Planner
+              </span>
+            </div>
+            <div
+              data-agent-wrapper="researcher"
+              className="absolute z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+              style={{ left: `${RESEARCHER_POSITION.xPercent}%`, top: `${RESEARCHER_POSITION.yPercent}%` }}
+            >
+              {conversation.researcherActiveSuggestions.size > 0 && (
+                <ThoughtBubble text={getActiveResearchLabel()} placement="below" />
+              )}
+              <CircleUserRound size={48} strokeWidth={1.5} color={RESEARCHER_COLOR} aria-label="Researcher" />
+              <span className="text-sm font-bold" style={{ color: RESEARCHER_COLOR }}>
+                Researcher
               </span>
             </div>
 
@@ -292,6 +353,9 @@ export default function SolveRestaurantsPage({
               const thinkingSuggestionName = activeLine
                 ? conversation.cards.find((c) => c.suggestion.id === activeLine.suggestionId)?.suggestion.name
                 : null
+              const bubbleText = activeLine?.phase === 'questioning'
+                ? `Deciding what to research about ${thinkingSuggestionName}`
+                : `Evaluating ${thinkingSuggestionName}`
               return (
                 <div
                   key={person.name}
@@ -306,7 +370,7 @@ export default function SolveRestaurantsPage({
                     personHoverTimeout.current = setTimeout(() => setHoveredPerson(null), 150)
                   }}
                 >
-                  {thinkingSuggestionName && <ThoughtBubble text={`Evaluating ${thinkingSuggestionName}`} />}
+                  {thinkingSuggestionName && <ThoughtBubble text={bubbleText} />}
                   {hoveredPerson === person.name && (
                     <PersonPreferencesPopover name={person.name} preferences={person.preferences} color={color} />
                   )}
@@ -347,6 +411,22 @@ export default function SolveRestaurantsPage({
                     x2Pct={cardPosition.xPercent}
                     y2Pct={cardPosition.yPercent}
                     color={getPersonAreaColor(personIndex)}
+                    iconRadiusPct={6}
+                  />
+                )
+              })}
+              {[...conversation.researcherActiveSuggestions].map((suggestionId) => {
+                const cardIndex = nonTrashedIndexById.get(suggestionId)
+                if (cardIndex === undefined) return null
+                const cardPosition = cardPositions[cardIndex]
+                return (
+                  <WigglyLine
+                    key={`researcher-${suggestionId}`}
+                    x1Pct={RESEARCHER_POSITION.xPercent}
+                    y1Pct={RESEARCHER_POSITION.yPercent}
+                    x2Pct={cardPosition.xPercent}
+                    y2Pct={cardPosition.yPercent}
+                    color={RESEARCHER_COLOR}
                     iconRadiusPct={6}
                   />
                 )

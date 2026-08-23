@@ -32,7 +32,8 @@ function AgentCard({ icon, name, description, nameColor, delay }: {
 }
 
 export default function MeetTheAgentsPage({ people, onBack, onNext }: MeetTheAgentsPageProps) {
-  const orchestratorColor = '#4A4A4A'
+  const orchestratorColor = 'var(--color-planner)'
+  const researcherColor = 'var(--color-researcher)'
 
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-6 py-10 sm:px-12 sm:py-16 bg-background text-secondary">
@@ -55,8 +56,22 @@ export default function MeetTheAgentsPage({ people, onBack, onNext }: MeetTheAge
       </section>
 
       <section className="mt-10">
+        <h2 className="text-xl font-bold">The Researcher</h2>
+        <p>The Researcher gathers everyone's questions and runs a small number of web searches for each restaurant, sharing one report with all the Judges.</p>
+        <div className="mt-6 space-y-8">
+          <AgentCard
+            icon={<CircleUserRound size={48} strokeWidth={1.5} color={researcherColor} />}
+            name="Researcher"
+            description="After the Judges decide what they need to know, the Researcher runs a bounded number of web searches per restaurant and compiles a shared report so the Judges don't each search on their own."
+            nameColor={researcherColor}
+            delay={225}
+          />
+        </div>
+      </section>
+
+      <section className="mt-10">
         <h2 className="text-xl font-bold">The Judges</h2>
-        <p>The Judges are responsible for representing each person in the conversatoin. Once the Planner proposes restaurants, each Judge will evaluate them based on their individual preferences.</p>
+        <p>The Judges are responsible for representing each person in the conversation. Once the Planner proposes restaurants, each Judge will evaluate them based on their individual preferences and the shared Researcher report.</p>
         <div className="mt-6 space-y-8">
           {people.map((person, index) => {
             const color = getPersonAreaColor(index)

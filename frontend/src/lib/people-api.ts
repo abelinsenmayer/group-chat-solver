@@ -56,6 +56,9 @@ export type RestaurantSuggestion = {
 export type SolveRestaurantsEvent =
   | { type: 'planner_started'; round: number }
   | { type: 'planner_suggestions'; round: number; suggestions: RestaurantSuggestion[] }
+  | { type: 'judge_questioning'; person: string; suggestion_id: string }
+  | { type: 'researcher_started'; suggestion_id: string }
+  | { type: 'researcher_done'; suggestion_id: string }
   | { type: 'judge_evaluating'; person: string; suggestion_id: string }
   | {
       type: 'judge_verdict'

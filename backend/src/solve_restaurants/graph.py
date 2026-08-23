@@ -11,7 +11,9 @@ from src.person import Person
 from . import events, run_logger
 from .judge import judge
 from .planner import NoRestaurantsFoundError, planner
-from .state import FinalResult, SolveRestaurantsState, person_to_payload
+from .question_gatherer import question_gatherer
+from .researcher import researcher
+from .state import FinalResult, ResearchReport, SolveRestaurantsState, person_to_payload
 from .success_check import route_after_success_check, success_check
 
 logger = logging.getLogger(__name__)
@@ -30,9 +32,18 @@ def _remove_task(run_id: str, task: asyncio.Task) -> None:
         pass
 
 
+def _noop(state: SolveRestaurantsState) -> dict:
+    """Join node: runs once after all parallel upstream branches finish."""
+    return {}
+
+
 def create_graph():
     builder = StateGraph(SolveRestaurantsState)
     builder.add_node("planner", planner)
+    builder.add_node("question_gatherer", question_gatherer)
+    builder.add_node("research_dispatch", _noop)
+    builder.add_node("researcher", researcher)
+    builder.add_node("judge_dispatch", _noop)
     builder.add_node("judge", judge)
     builder.add_node("success_check", success_check)
 
@@ -41,14 +52,50 @@ def create_graph():
         "planner",
         lambda state: [
             Send(
+                "question_gatherer",
+                {
+                    "run_id": state.run_id,
+                    "person": person.model_dump(),
+                    "suggestion": suggestion.model_dump(),
+                },
+            )
+            for person in state.people
+            for suggestion in state.suggestions
+        ],
+    )
+    # Plain edge from a fanned-out node creates a fan-in barrier.
+    builder.add_edge("question_gatherer", "research_dispatch")
+    builder.add_conditional_edges(
+        "research_dispatch",
+        lambda state: [
+            Send(
+                "researcher",
+                {
+                    "run_id": state.run_id,
+                    "suggestion": suggestion.model_dump(),
+                    "questions_by_person": state.research_questions.get(suggestion.id, {}),
+                },
+            )
+            for suggestion in state.suggestions
+        ],
+    )
+    builder.add_edge("researcher", "judge_dispatch")
+    builder.add_conditional_edges(
+        "judge_dispatch",
+        lambda state: [
+            Send(
                 "judge",
                 {
                     "run_id": state.run_id,
                     "person": person.model_dump(),
-                    "suggestions": [s.model_dump() for s in state.suggestions],
+                    "suggestions": [suggestion.model_dump()],
+                    "research_report": state.research_reports.get(
+                        suggestion.id, ResearchReport(summary="", sources=[])
+                    ).model_dump(),
                 },
             )
             for person in state.people
+            for suggestion in state.suggestions
         ],
     )
     builder.add_edge("judge", "success_check")

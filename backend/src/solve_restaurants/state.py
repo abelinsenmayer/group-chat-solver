@@ -44,6 +44,15 @@ class JudgeVerdict(BaseModel):
     feedback: str | None = None
 
 
+class JudgeResearchQuestions(BaseModel):
+    questions: list[str]
+
+
+class ResearchReport(BaseModel):
+    summary: str
+    sources: list[str] = []
+
+
 class FinalResult(BaseModel):
     status: Literal["consensus", "no_consensus", "no_restaurants_found"]
     suggestions: list[RestaurantSuggestion]
@@ -63,6 +72,8 @@ class SolveRestaurantsState(BaseModel):
     round: int = 1
     suggestions: list[RestaurantSuggestion] = []
     past_suggestion_ids: Annotated[set[str], union_sets] = set()
+    research_questions: Annotated[dict[str, dict[str, list[str]]], merge_dicts] = {}
+    research_reports: Annotated[dict[str, ResearchReport], merge_dicts] = {}
     verdicts: Annotated[dict[str, dict[str, JudgeVerdict]], merge_dicts] = {}
     feedback_summary: str = ""
     result: FinalResult | None = None

@@ -6,6 +6,8 @@ from src.solve_restaurants.config import Settings, configure_langsmith_tracing, 
 def test_settings_load_required_env_vars(monkeypatch):
     monkeypatch.setenv("MAPBOX_ACCESS_TOKEN", "mapbox-token")
     monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("LANGSMITH_TRACING", raising=False)
     monkeypatch.delenv("LANGSMITH_API_KEY", raising=False)
     get_settings.cache_clear()
 
@@ -14,12 +16,13 @@ def test_settings_load_required_env_vars(monkeypatch):
     assert settings.tavily_api_key == "tavily-key"
     assert settings.ai_provider == "ollama"
     assert settings.google_api_key is None
-    assert settings.gemini_model == "gemini-2.0-flash"
+    assert settings.gemini_model == "gemini-3.5-flash"
     assert settings.ollama_base_url == "http://localhost:11434"
     assert settings.ollama_model == "gemma4:12b"
     assert settings.log_dir.endswith(os.path.join("logs", "runs"))
     assert settings.langsmith_api_key is None
     assert settings.langsmith_project == "group-chat-solver"
+    assert settings.researcher_search_limit == 2
 
 
 def test_settings_langsmith_endpoint_reads_from_env(monkeypatch):

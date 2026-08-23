@@ -2,50 +2,21 @@ from datetime import datetime, timezone
 import logging
 
 from langchain.agents import create_agent
-from langchain.agents.middleware import ToolCallLimitMiddleware
-from langchain_core.tools import tool
-from langsmith import traceable
-from tavily import TavilyClient
 
 from . import events
-from .config import get_settings
 from .llm import get_chat_llm
-from .state import JudgeVerdict, PersonPayload, RestaurantSuggestion, StepLog, Verdict
+from .state import JudgeVerdict, PersonPayload, ResearchReport, RestaurantSuggestion, StepLog, Verdict
 
 
 logger = logging.getLogger(__name__)
-
-
-def _create_web_search_tool(client: TavilyClient):
-    @tool
-    def web_search(query: str) -> str:
-        """Search the web for information about a restaurant.
-
-        Use this to research a restaurant (menu, reviews, cuisine, dietary options, etc.)
-        before deciding whether it satisfies someone's preferences. Call it again with a
-        different or more specific query if the first results are not useful.
-
-        Args:
-            query: Search terms, e.g. "Veggie Spot 1 Main St menu vegetarian".
-        """
-        try:
-            response = client.search(query=query, max_results=3)
-            results = response.get("results", [])
-            content = "\n".join(r.get("content", "") for r in results)
-            return content or "No results found for this query."
-        except Exception as error:
-            return f"Error researching restaurant: {error}"
-
-    return web_search
 
 
 async def judge(payload: dict) -> dict:
     run_id = payload.get("run_id", "")
     person = PersonPayload.model_validate(payload["person"])
     suggestions = [RestaurantSuggestion.model_validate(s) for s in payload["suggestions"]]
-    settings = get_settings()
-    client = TavilyClient(api_key=settings.tavily_api_key)
-    web_search_tool = _create_web_search_tool(client)
+    raw_report = payload.get("research_report")
+    research_report = ResearchReport.model_validate(raw_report) if raw_report else ResearchReport(summary="", sources=[])
     llm = get_chat_llm(temperature=0.2)
 
     verdicts = {}
@@ -55,9 +26,8 @@ async def judge(payload: dict) -> dict:
         events.emit(run_id, {"type": "judge_evaluating", "person": person.name, "suggestion_id": suggestion.id})
         agent = create_agent(
             model=llm,
-            tools=[web_search_tool],
-            system_prompt=_judge_prompt(person, suggestion),
-            middleware=[ToolCallLimitMiddleware(tool_name="web_search", run_limit=3)],
+            tools=[],
+            system_prompt=_judge_prompt(person, suggestion, research_report),
             response_format=JudgeVerdict,
         )
         try:
@@ -66,7 +36,7 @@ async def judge(payload: dict) -> dict:
                     "messages": [
                         {
                             "role": "user",
-                            "content": "Research this restaurant using web_search, then give your verdict.",
+                            "content": "Based on the research report, give your verdict.",
                         }
                     ]
                 },
@@ -137,12 +107,17 @@ def _recover_structured_response(messages: list) -> JudgeVerdict | None:
     return recovered
 
 
-def _judge_prompt(person: PersonPayload, suggestion: RestaurantSuggestion) -> str:
+def _judge_prompt(person: PersonPayload, suggestion: RestaurantSuggestion, report: ResearchReport) -> str:
+    report_section = (
+        f"Research report for {suggestion.name}:\n{report.summary}\n"
+        if report.summary
+        else "No research report is available."
+    )
     return (
         f"You are representing {person.name} and their preferences: {person.preferences}.\n\n"
-        "Use the web_search tool to research the following restaurant before deciding.\n\n"
         f"Restaurant: {suggestion.name}\n"
         f"Address: {suggestion.address or 'unknown'}\n\n"
+        f"{report_section}\n\n"
         "Evaluate whether the restaurant satisfies these preferences. "
         "Return 'approved' if the restaurant clearly satisfies the preferences, leaving "
         "short_reason and feedback empty. "
@@ -151,7 +126,5 @@ def _judge_prompt(person: PersonPayload, suggestion: RestaurantSuggestion) -> st
         "'No vegetarian options') summarizing why it was rejected.\n"
         "- feedback: a short feedback paragraph (at most a few sentences) explaining the "
         "rejection in more detail.\n\n"
-        "IMPORTANT: Call the web_search tool as many times as you need first (up to 3). "
-        "Only call the final verdict tool by itself, once you are done researching, and "
-        "never call it more than once or alongside another tool call."
+        "IMPORTANT: Do not call any tools. Only call the final verdict tool once, by itself."
     )

@@ -2,7 +2,9 @@ from datetime import time
 
 from src.solve_restaurants.state import (
     FinalResult,
+    JudgeResearchQuestions,
     JudgeVerdict,
+    ResearchReport,
     RestaurantSuggestion,
     SolveRestaurantsState,
     Verdict,
@@ -27,6 +29,8 @@ def test_solve_restaurants_state_defaults():
     state = SolveRestaurantsState(people=[], overlap={"type": "Polygon", "coordinates": []})
     assert state.round == 1
     assert state.suggestions == []
+    assert state.research_questions == {}
+    assert state.research_reports == {}
     assert state.verdicts == {}
     assert state.feedback_summary == ""
     assert state.result is None
@@ -95,3 +99,20 @@ def test_union_sets_reducer():
 def test_state_tracks_past_suggestion_ids():
     state = SolveRestaurantsState(people=[], overlap={"type": "Polygon", "coordinates": []})
     assert state.past_suggestion_ids == set()
+
+
+def test_judge_research_questions_model():
+    qr = JudgeResearchQuestions(questions=["does it have vegetarian options?", "is it expensive?"])
+    assert qr.questions == ["does it have vegetarian options?", "is it expensive?"]
+
+
+def test_research_report_model():
+    report = ResearchReport(summary="Vegetarian friendly, mid-priced.", sources=["https://example.com"])
+    assert report.summary == "Vegetarian friendly, mid-priced."
+    assert report.sources == ["https://example.com"]
+
+
+def test_state_has_research_fields():
+    state = SolveRestaurantsState(people=[], overlap={"type": "Polygon", "coordinates": []}, run_id="run-1")
+    assert state.research_questions == {}
+    assert state.research_reports == {}
