@@ -26,6 +26,7 @@ def test_get_chat_llm_returns_gemini_client_when_configured(monkeypatch):
     monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
     monkeypatch.setenv("AI_PROVIDER", "gemini")
     monkeypatch.setenv("GOOGLE_API_KEY", "google-key")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.5-flash")
     get_settings.cache_clear()
 
     mock_llm = MagicMock()
@@ -35,7 +36,7 @@ def test_get_chat_llm_returns_gemini_client_when_configured(monkeypatch):
         llm = get_chat_llm(temperature=0.5)
 
     mock_chat_gemini.assert_called_once_with(
-        model="gemini-2.0-flash",
+        model="gemini-3.5-flash",
         google_api_key="google-key",
         temperature=0.5,
     )
@@ -85,5 +86,75 @@ def test_get_chat_llm_uses_model_override_for_gemini(monkeypatch):
     mock_chat_gemini.assert_called_once_with(
         model="gemini-2.5-flash",
         google_api_key="google-key",
+        temperature=0.2,
+    )
+
+
+def test_get_chat_llm_uses_stage_specific_model_for_gemini(monkeypatch):
+    monkeypatch.setenv("MAPBOX_ACCESS_TOKEN", "mapbox-token")
+    monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GOOGLE_API_KEY", "google-key")
+    monkeypatch.setenv("GEMINI_PLANNER_MODEL", "gemini-2.5-pro")
+    get_settings.cache_clear()
+
+    with patch("src.solve_restaurants.llm.ChatGoogleGenerativeAI") as mock_chat_gemini:
+        get_chat_llm(temperature=0.2, stage="planner")
+
+    mock_chat_gemini.assert_called_once_with(
+        model="gemini-2.5-pro",
+        google_api_key="google-key",
+        temperature=0.2,
+    )
+
+
+def test_get_chat_llm_stage_falls_back_to_global_gemini_model(monkeypatch):
+    monkeypatch.setenv("MAPBOX_ACCESS_TOKEN", "mapbox-token")
+    monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GOOGLE_API_KEY", "google-key")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.5-flash")
+    monkeypatch.setenv("GEMINI_JUDGE_MODEL", "")  # empty = falsy, falls back to global
+    get_settings.cache_clear()
+
+    with patch("src.solve_restaurants.llm.ChatGoogleGenerativeAI") as mock_chat_gemini:
+        get_chat_llm(temperature=0.2, stage="judge")
+
+    mock_chat_gemini.assert_called_once_with(
+        model="gemini-3.5-flash",
+        google_api_key="google-key",
+        temperature=0.2,
+    )
+
+
+def test_get_chat_llm_explicit_model_overrides_stage(monkeypatch):
+    monkeypatch.setenv("MAPBOX_ACCESS_TOKEN", "mapbox-token")
+    monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
+    monkeypatch.setenv("AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GOOGLE_API_KEY", "google-key")
+    monkeypatch.setenv("GEMINI_PLANNER_MODEL", "gemini-2.5-pro")
+    get_settings.cache_clear()
+
+    with patch("src.solve_restaurants.llm.ChatGoogleGenerativeAI") as mock_chat_gemini:
+        get_chat_llm(model="gemini-custom", temperature=0.2, stage="planner")
+
+    mock_chat_gemini.assert_called_once_with(
+        model="gemini-custom",
+        google_api_key="google-key",
+        temperature=0.2,
+    )
+
+
+def test_get_chat_llm_stage_ignored_for_ollama(monkeypatch):
+    monkeypatch.setenv("MAPBOX_ACCESS_TOKEN", "mapbox-token")
+    monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
+    get_settings.cache_clear()
+
+    with patch("src.solve_restaurants.llm.ChatOllama") as mock_chat_ollama:
+        get_chat_llm(temperature=0.2, stage="planner")
+
+    mock_chat_ollama.assert_called_once_with(
+        base_url="http://localhost:11434",
+        model="gemma4:12b",
         temperature=0.2,
     )

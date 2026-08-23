@@ -18,7 +18,11 @@ class Settings(BaseSettings):
     tavily_api_key: str
     ai_provider: str = "ollama"
     google_api_key: str | None = None
-    gemini_model: str = "gemini-3.5-flash"
+    gemini_model: str = "gemini-2.5-flash-lite"
+    gemini_planner_model: str | None = "gemini-3.1-flash-lite"
+    gemini_question_gatherer_model: str | None = "gemini-2.5-flash-lite"
+    gemini_researcher_model: str | None = "gemini-3.7-flash"
+    gemini_judge_model: str | None = "gemini-3.1-flash-lite"
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "gemma4:12b"
     log_dir: str = os.path.join(os.path.dirname(__file__), "..", "..", "logs", "runs")
@@ -29,6 +33,15 @@ class Settings(BaseSettings):
     langsmith_api_key: str | None = None
     langsmith_project: str = "group-chat-solver"
     langsmith_endpoint: str | None = None
+
+    def gemini_model_for_stage(self, stage: str) -> str:
+        """Return the Gemini model name for a given pipeline stage.
+
+        Falls back to the global ``gemini_model`` when no stage-specific
+        override is configured.
+        """
+        override = getattr(self, f"gemini_{stage}_model", None)
+        return override or self.gemini_model
 
     @field_validator("ai_provider", mode="before")
     @classmethod

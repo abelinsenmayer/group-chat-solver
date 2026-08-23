@@ -85,7 +85,7 @@ async def researcher(payload: dict) -> dict:
 
     client = TavilyClient(api_key=settings.tavily_api_key)
     web_search_tool = _create_web_search_tool(client)
-    llm = get_chat_llm(temperature=0.2)
+    llm = get_chat_llm(temperature=0.2, stage="researcher")
 
     agent = create_agent(
         model=llm,

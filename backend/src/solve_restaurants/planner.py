@@ -116,7 +116,7 @@ async def planner(state) -> dict:
         polygon_coords, accumulated_features, excluded_ids=excluded_ids
     )
 
-    llm = get_chat_llm(temperature=0.2)
+    llm = get_chat_llm(temperature=0.2, stage="planner")
     agent = create_agent(
         model=llm,
         tools=[search_tool],

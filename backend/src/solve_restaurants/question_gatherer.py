@@ -20,7 +20,7 @@ async def question_gatherer(payload: dict) -> dict:
         {"type": "judge_questioning", "person": person.name, "suggestion_id": suggestion.id},
     )
 
-    llm = get_chat_llm(temperature=0.2)
+    llm = get_chat_llm(temperature=0.2, stage="question_gatherer")
     agent = create_agent(
         model=llm,
         tools=[],

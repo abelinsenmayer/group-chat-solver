@@ -17,7 +17,7 @@ async def judge(payload: dict) -> dict:
     suggestions = [RestaurantSuggestion.model_validate(s) for s in payload["suggestions"]]
     raw_report = payload.get("research_report")
     research_report = ResearchReport.model_validate(raw_report) if raw_report else ResearchReport(summary="", sources=[])
-    llm = get_chat_llm(temperature=0.2)
+    llm = get_chat_llm(temperature=0.2, stage="judge")
 
     verdicts = {}
     notes = []

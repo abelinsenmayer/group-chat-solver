@@ -25,8 +25,17 @@ AI_PROVIDER=ollama                              # "ollama" (default, local) or "
 GOOGLE_API_KEY=<google api key>                 # required only when AI_PROVIDER=gemini
 OLLAMA_BASE_URL=http://localhost:11434          # default shown
 OLLAMA_MODEL=gemma4:12b                         # default shown
-GEMINI_MODEL=gemini-3.5-flash                   # default shown
+GEMINI_MODEL=gemini-2.5-flash-lite                    # global fallback model
+GEMINI_PLANNER_MODEL=gemini-3.1-flash-lite            # planner stage
+GEMINI_QUESTION_GATHERER_MODEL=gemini-2.5-flash-lite  # question-gathering stage
+GEMINI_RESEARCHER_MODEL=gemini-3.7-flash              # web-research stage
+GEMINI_JUDGE_MODEL=gemini-3.1-flash-lite              # judging stage
 ```
+
+Each stage of the solve-restaurants pipeline (planner, question gathering, research, judging)
+picks its model from its own `GEMINI_*_MODEL` variable. Setting one to an empty value makes that
+stage fall back to `GEMINI_MODEL`. These variables only affect `AI_PROVIDER=gemini`; under
+`AI_PROVIDER=ollama` every stage uses `OLLAMA_MODEL`.
 
 Do not commit `.env` or any real tokens.
 

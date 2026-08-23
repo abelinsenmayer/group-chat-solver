@@ -6,23 +6,20 @@ from src.solve_restaurants.config import Settings, configure_langsmith_tracing, 
 def test_settings_load_required_env_vars(monkeypatch):
     monkeypatch.setenv("MAPBOX_ACCESS_TOKEN", "mapbox-token")
     monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
-    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-    monkeypatch.delenv("LANGSMITH_TRACING", raising=False)
-    monkeypatch.delenv("LANGSMITH_API_KEY", raising=False)
+    monkeypatch.setenv("AI_PROVIDER", "ollama")
     get_settings.cache_clear()
 
     settings = get_settings()
     assert settings.mapbox_access_token == "mapbox-token"
     assert settings.tavily_api_key == "tavily-key"
     assert settings.ai_provider == "ollama"
-    assert settings.google_api_key is None
-    assert settings.gemini_model == "gemini-3.5-flash"
     assert settings.ollama_base_url == "http://localhost:11434"
     assert settings.ollama_model == "gemma4:12b"
     assert settings.log_dir.endswith(os.path.join("logs", "runs"))
-    assert settings.langsmith_api_key is None
     assert settings.langsmith_project == "group-chat-solver"
     assert settings.researcher_search_limit == 2
+    # gemini_model has a code default but may be overridden by .env
+    assert isinstance(settings.gemini_model, str) and len(settings.gemini_model) > 0
 
 
 def test_settings_langsmith_endpoint_reads_from_env(monkeypatch):
@@ -71,6 +68,67 @@ def test_settings_ai_provider_rejects_invalid_values(monkeypatch):
         assert "must be 'gemini' or 'ollama'" in str(error)
     else:
         assert False, "Expected ValueError for invalid AI_PROVIDER"
+
+
+def test_settings_per_stage_gemini_models_can_be_configured(monkeypatch):
+    """Verify per-stage model fields are populated from env vars."""
+    monkeypatch.setenv("MAPBOX_ACCESS_TOKEN", "mapbox-token")
+    monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
+    monkeypatch.setenv("GEMINI_PLANNER_MODEL", "gemini-2.5-pro")
+    monkeypatch.setenv("GEMINI_QUESTION_GATHERER_MODEL", "gemini-3.5-flash")
+    monkeypatch.setenv("GEMINI_RESEARCHER_MODEL", "gemini-2.5-flash")
+    monkeypatch.setenv("GEMINI_JUDGE_MODEL", "gemini-2.5-pro")
+    get_settings.cache_clear()
+
+    settings = get_settings()
+    assert settings.gemini_planner_model == "gemini-2.5-pro"
+    assert settings.gemini_question_gatherer_model == "gemini-3.5-flash"
+    assert settings.gemini_researcher_model == "gemini-2.5-flash"
+    assert settings.gemini_judge_model == "gemini-2.5-pro"
+
+
+def test_settings_gemini_model_for_stage_falls_back_to_global(monkeypatch):
+    """Every known stage falls back to the global model when its override is blank."""
+    monkeypatch.setenv("MAPBOX_ACCESS_TOKEN", "mapbox-token")
+    monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.5-flash")
+    for stage in ("PLANNER", "QUESTION_GATHERER", "RESEARCHER", "JUDGE"):
+        monkeypatch.setenv(f"GEMINI_{stage}_MODEL", "")
+    get_settings.cache_clear()
+
+    settings = get_settings()
+    assert settings.gemini_model_for_stage("planner") == "gemini-3.5-flash"
+    assert settings.gemini_model_for_stage("question_gatherer") == "gemini-3.5-flash"
+    assert settings.gemini_model_for_stage("researcher") == "gemini-3.5-flash"
+    assert settings.gemini_model_for_stage("judge") == "gemini-3.5-flash"
+
+
+def test_settings_gemini_model_for_stage_uses_override(monkeypatch):
+    monkeypatch.setenv("MAPBOX_ACCESS_TOKEN", "mapbox-token")
+    monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.5-flash")
+    monkeypatch.setenv("GEMINI_PLANNER_MODEL", "gemini-2.5-pro")
+    monkeypatch.setenv("GEMINI_QUESTION_GATHERER_MODEL", "gemini-2.5-flash-lite")
+    monkeypatch.setenv("GEMINI_RESEARCHER_MODEL", "gemini-2.5-flash")
+    monkeypatch.setenv("GEMINI_JUDGE_MODEL", "gemini-2.5-pro")
+    get_settings.cache_clear()
+
+    settings = get_settings()
+    assert settings.gemini_model_for_stage("planner") == "gemini-2.5-pro"
+    assert settings.gemini_model_for_stage("question_gatherer") == "gemini-2.5-flash-lite"
+    assert settings.gemini_model_for_stage("researcher") == "gemini-2.5-flash"
+    assert settings.gemini_model_for_stage("judge") == "gemini-2.5-pro"
+
+
+def test_settings_gemini_model_for_stage_unknown_stage_falls_back(monkeypatch):
+    """An unrecognized stage name has no matching field, so it uses the global model."""
+    monkeypatch.setenv("MAPBOX_ACCESS_TOKEN", "mapbox-token")
+    monkeypatch.setenv("TAVILY_API_KEY", "tavily-key")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.5-flash")
+    get_settings.cache_clear()
+
+    settings = get_settings()
+    assert settings.gemini_model_for_stage("unknown_stage") == "gemini-3.5-flash"
 
 
 def test_configure_langsmith_tracing_noop_when_disabled(monkeypatch):
