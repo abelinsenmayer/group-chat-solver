@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import PersonCard from '../components/PersonCard'
+import AddPersonDialog from '../components/AddPersonDialog'
+import { Button } from '../components/ui/button'
 import { fetchPeople, type Person } from '../lib/people-api'
 
 type PersonPickerPageProps = {
@@ -14,6 +16,8 @@ export default function PersonPickerPage({ onNext, onBack, initialPeople, onPeop
   const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(initialPeople === undefined)
   const [error, setError] = useState(false)
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editingPerson, setEditingPerson] = useState<Person>()
 
   const loadPeople = useCallback(async (signal?: AbortSignal) => {
     setLoading(true)
@@ -48,6 +52,29 @@ export default function PersonPickerPage({ onNext, onBack, initialPeople, onPeop
       }
       return next
     })
+  }
+
+  const handleAddPerson = (person: Person) => {
+    const next = [...people, person]
+    setPeople(next)
+    onPeopleLoaded?.(next)
+    setSelectedNames((current) => new Set([...current, person.name]))
+  }
+
+  const handleEditPerson = (updatedPerson: Person) => {
+    if (!editingPerson) return
+    const originalName = editingPerson.name
+    const next = people.map((person) => person.name === originalName ? updatedPerson : person)
+    setPeople(next)
+    onPeopleLoaded?.(next)
+    setSelectedNames((current) => {
+      if (!current.has(originalName) || originalName === updatedPerson.name) return current
+      const nextSelected = new Set(current)
+      nextSelected.delete(originalName)
+      nextSelected.add(updatedPerson.name)
+      return nextSelected
+    })
+    setEditingPerson(undefined)
   }
 
   const selectedPeople = people.filter((person) => selectedNames.has(person.name))
@@ -87,11 +114,41 @@ export default function PersonPickerPage({ onNext, onBack, initialPeople, onPeop
                 person={person}
                 selected={selectedNames.has(person.name)}
                 onToggle={() => togglePerson(person.name)}
+                onEdit={() => setEditingPerson(person)}
               />
             ))}
           </div>
         )}
+
+        {!loading && !error && (
+          <div className="mt-8 flex justify-center">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAddDialogOpen(true)}
+              className="border-2 border-dashed border-secondary font-bold text-secondary hover:bg-secondary hover:text-background"
+            >
+              + Add a Person
+            </Button>
+          </div>
+        )}
       </section>
+
+      <AddPersonDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onSubmit={handleAddPerson}
+        existingNames={people.map((person) => person.name)}
+      />
+      <AddPersonDialog
+        open={editingPerson !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setEditingPerson(undefined)
+        }}
+        onSubmit={handleEditPerson}
+        existingNames={people.map((person) => person.name)}
+        initialPerson={editingPerson}
+      />
 
       <div className="mt-10 flex justify-between">
         <button

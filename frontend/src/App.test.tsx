@@ -52,7 +52,7 @@ test('renders people loaded from the API', async () => {
 
   await startFromLanding(user)
 
-  expect(await screen.findByRole('button', { name: /elena/i })).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: 'Select Elena' })).toBeInTheDocument()
   expect(screen.getByText(/5:30 PM–8:00 PM/)).toBeInTheDocument()
   expect(screen.getByText(/40.7589, -73.9851/)).toBeInTheDocument()
   expect(screen.getByText(/Outdoor seating preferred/)).toBeInTheDocument()
@@ -105,7 +105,7 @@ test('shows the event timeline after selecting a person', async () => {
 
   await startFromLanding(user)
 
-  await user.click(await screen.findByRole('button', { name: /elena/i }))
+  await user.click(await screen.findByRole('button', { name: 'Select Elena' }))
   await user.click(screen.getByRole('button', { name: /next/i }))
 
   expect(await screen.findByRole('heading', { name: /when should we meet\?/i })).toBeInTheDocument()
@@ -148,7 +148,7 @@ test('does not refetch the timeline when navigating back from the map', async ()
 
   await startFromLanding(user)
 
-  await user.click(await screen.findByRole('button', { name: /elena/i }))
+  await user.click(await screen.findByRole('button', { name: 'Select Elena' }))
   await user.click(screen.getByRole('button', { name: /next/i }))
   await screen.findByRole('heading', { name: /when should we meet\?/i })
   await user.click(screen.getByRole('button', { name: /next/i }))
@@ -198,7 +198,7 @@ test('resets the restaurant solver to its initial state when navigating back the
 
   await startFromLanding(user)
 
-  await user.click(await screen.findByRole('button', { name: /elena/i }))
+  await user.click(await screen.findByRole('button', { name: 'Select Elena' }))
   await user.click(screen.getByRole('button', { name: /next/i }))
   await screen.findByRole('heading', { name: /when should we meet\?/i })
   await user.click(screen.getByRole('button', { name: /next/i }))
