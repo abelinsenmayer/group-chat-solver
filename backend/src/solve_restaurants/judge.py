@@ -6,6 +6,7 @@ from langchain.agents import create_agent
 
 from . import events
 from .llm import get_chat_llm
+from .prompt_utils import load_security_rules
 from .state import JudgeVerdict, PersonPayload, ResearchReport, RestaurantSuggestion, StepLog, Verdict
 
 
@@ -116,4 +117,5 @@ def _judge_prompt(person: PersonPayload, suggestion: RestaurantSuggestion, repor
         restaurant_name=suggestion.name,
         restaurant_address=suggestion.address or "unknown",
         report_summary=report.summary or "None",
+        security_rules=load_security_rules(),
     )

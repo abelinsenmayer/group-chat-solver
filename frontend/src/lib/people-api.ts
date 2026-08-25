@@ -153,7 +153,10 @@ export async function fetchSolveRestaurants(
   const response = await postJson('/api/solve-restaurants', { people, overlap }, signal)
 
   if (!response.ok) {
-    throw new Error('Unable to start restaurant solver.')
+    if (response.status === 422) {
+      throw new Error('The input could not be processed or contained a security risk. Try rephrasing custom inputs.')
+    }
+    throw new Error('Unable to start the restaurant solver.')
   }
 
   return response.json() as Promise<SolveRestaurantsResponse>

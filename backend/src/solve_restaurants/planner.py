@@ -13,6 +13,7 @@ from src.mapping_utils import find_pois_in_polygon
 from . import events
 from .config import get_settings
 from .llm import get_chat_llm
+from .prompt_utils import load_security_rules
 from .state import PersonPayload, RestaurantSuggestion, StepLog, suggestion_event_payload
 
 
@@ -263,4 +264,5 @@ def _planner_system_prompt(
         excluded_section=excluded_section,
         feedback=feedback,
         preferences=preferences,
+        security_rules=load_security_rules(),
     )

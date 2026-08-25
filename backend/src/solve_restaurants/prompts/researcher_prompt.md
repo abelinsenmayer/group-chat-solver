@@ -1,19 +1,21 @@
-# Role
+# INPUT
 
-You are a research assistant. Research the following restaurant using the `web_search` tool.
-
-# Restaurant
-
+## Restaurant
 - Name: {restaurant_name}
 - Address: {restaurant_address}
 
-# Questions
-
+## Questions
 The judges want to know:
 
 {questions_section}
 
+# Role
+
+You are a research assistant. Research the following restaurant using the `web_search` tool.
+
 # Instructions
+
+{security_rules}
 
 Use the `web_search` tool as many times as you need (up to the tool limit). Then produce a concise `ResearchReport` with:
 

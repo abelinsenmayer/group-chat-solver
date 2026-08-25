@@ -15,6 +15,7 @@ from src.solve_restaurants.config import configure_langsmith_tracing
 from src.solve_restaurants.graph import cancel_solve_restaurants, start_solve_restaurants
 from src.solver import solve_event_timeline, solve_reachable_areas
 from fastapi.middleware.cors import CORSMiddleware
+from src.solve_restaurants.prompt_utils import check_people_for_input_risks
 
 configure_logging()
 configure_langsmith_tracing()
@@ -82,6 +83,12 @@ def get_reachable_areas(request: ReachableAreasRequest) -> dict[str, object]:
 @app.post("/api/solve-restaurants")
 async def solve_restaurants(request: SolveRestaurantsRequest) -> dict[str, object]:
     people = people_from_request(request.people)
+    
+    try:
+        check_people_for_input_risks(people)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
     run_id, _ = start_solve_restaurants(people, request.overlap)
     return {"run_id": run_id, "status": "started"}
 

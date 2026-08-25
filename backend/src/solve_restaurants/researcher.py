@@ -10,6 +10,7 @@ from tavily import TavilyClient
 from . import events
 from .config import get_settings
 from .llm import get_chat_llm
+from .prompt_utils import load_security_rules
 from .state import ResearchReport, RestaurantSuggestion, StepLog
 
 logger = logging.getLogger(__name__)
@@ -166,4 +167,5 @@ def _researcher_prompt(suggestion: RestaurantSuggestion, questions: list[str]) -
         restaurant_name=suggestion.name,
         restaurant_address=suggestion.address or "unknown",
         questions_section=questions_section,
+        security_rules=load_security_rules(),
     )

@@ -64,13 +64,23 @@ test('shows a loading message while the solver is starting', async () => {
 })
 
 test('shows an error message when the solver fails to start', async () => {
-  vi.mocked(fetchSolveRestaurants).mockRejectedValue(new Error('failed'))
+  vi.mocked(fetchSolveRestaurants).mockRejectedValue(new Error('Unable to start the restaurant solver.'))
   const user = userEvent.setup()
 
   render(<SolveRestaurantsPage people={[elena]} overlap={overlap} onBack={vi.fn()} />)
   await user.click(screen.getByRole('button', { name: /start/i }))
 
   expect(await screen.findByText('Unable to start the restaurant solver.')).toBeInTheDocument()
+})
+
+test('shows a user-friendly message when the solver rejects input as invalid', async () => {
+  vi.mocked(fetchSolveRestaurants).mockRejectedValue(new Error('The input could not be processed.'))
+  const user = userEvent.setup()
+
+  render(<SolveRestaurantsPage people={[elena]} overlap={overlap} onBack={vi.fn()} />)
+  await user.click(screen.getByRole('button', { name: /start/i }))
+
+  expect(await screen.findByText('The input could not be processed or contained a security risk. Try rephrasing custom inputs.')).toBeInTheDocument()
 })
 
 test('does not refetch when an initial status is provided', async () => {

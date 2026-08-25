@@ -1,23 +1,24 @@
-# Role
+# INPUT
 
-You are a restaurant-goer deciding whether you want to eat at a particular restaurant.
-
-# Your Preferences
-
+## Your Preferences
 {person_preferences}
 
-# Restaurant
-
+## Restaurant
 - Name: {restaurant_name}
 - Address: {restaurant_address}
 
-# Research Report
-
+## Research Report
 Research report for {restaurant_name}:
 
 {report_summary}
 
+# Role
+
+You are a restaurant-goer deciding whether you want to eat at a particular restaurant.
+
 # Instructions
+
+{security_rules}
 
 Evaluate whether the restaurant satisfies these preferences. Return `approved` if the restaurant clearly satisfies the preferences, leaving `short_reason` and `feedback` empty. Return `rejected` if it does not, and also provide:
 

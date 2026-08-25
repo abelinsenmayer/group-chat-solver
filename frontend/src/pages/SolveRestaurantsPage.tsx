@@ -174,6 +174,7 @@ export default function SolveRestaurantsPage({
   const [simulationPhase, setSimulationPhase] = useState<'idle' | 'running' | 'finished'>(
     initialStatus ? 'running' : 'idle',
   )
+  const [initError, setInitError] = useState<string | null>(null)
   const [trashHovered, setTrashHovered] = useState(false)
   const trashHoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [hoveredPerson, setHoveredPerson] = useState<string | null>(null)
@@ -194,6 +195,7 @@ export default function SolveRestaurantsPage({
       })
       .catch((err) => {
         if (err instanceof DOMException && err.name === 'AbortError') return
+        setInitError(err instanceof Error ? err.message : 'Unable to start the restaurant solver.')
         setStatus('error')
         setSimulationPhase('finished')
       })
@@ -205,6 +207,7 @@ export default function SolveRestaurantsPage({
     setSimulationPhase('idle')
     setStatus('loading')
     setRunId(null)
+    setInitError(null)
     dispatch({ type: 'reset' })
     onStatusLoaded?.(null)
   }
@@ -268,10 +271,8 @@ export default function SolveRestaurantsPage({
       {status === 'loading' && simulationPhase === 'running' && (
         <p className="mt-8">Starting the restaurant solver...</p>
       )}
-      {status === 'error' && (
-        <p className="mt-8 rounded-md border-2 border-secondary px-4 py-3 font-medium">
-          Unable to start the restaurant solver.
-        </p>
+      {status === 'error' && initError && (
+        <p className="mt-8 rounded-md border-2 border-secondary px-4 py-3 font-medium">{initError}</p>
       )}
 
       {simulationPhase === 'idle' && (

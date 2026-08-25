@@ -6,6 +6,7 @@ from langchain.agents import create_agent
 
 from . import events
 from .llm import get_chat_llm
+from .prompt_utils import load_security_rules
 from .state import JudgeResearchQuestions, PersonPayload, RestaurantSuggestion, StepLog
 
 logger = logging.getLogger(__name__)
@@ -90,4 +91,5 @@ def _question_gatherer_prompt(person: PersonPayload, suggestion: RestaurantSugge
         person_preferences=person.preferences,
         restaurant_name=suggestion.name,
         restaurant_address=suggestion.address or "unknown",
+        security_rules=load_security_rules(),
     )
