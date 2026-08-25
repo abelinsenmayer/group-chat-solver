@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import logging
+from pathlib import Path
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import ToolCallLimitMiddleware
@@ -250,44 +251,16 @@ def _planner_system_prompt(
     excluded_ids: set[str] | None = None,
 ) -> str:
     preferences = "\n".join(f"- {p.name}: {p.preferences}" for p in people)
-    feedback = (
-        f"\n\nFeedback from previous round:\n{feedback_summary}"
-        if feedback_summary.strip()
-        else ""
+    excluded_section = (
+        "\n".join(f"- {rid}" for rid in sorted(excluded_ids or [])) or "None"
     )
-    excluded_section = ""
-    if excluded_ids:
-        excluded_list = "\n".join(f"- {rid}" for rid in sorted(excluded_ids))
-        excluded_section = (
-            f"\n\nPreviously suggested restaurants (do NOT select these again; "
-            f"{len(excluded_ids)} total):\n{excluded_list}"
-        )
-    return (
-        "You are a restaurant planner. Use the search_restaurants tool to find real candidate "
-        "restaurants that satisfy the group's preferences, then select up to 5 (fewer if you "
-        "cannot find enough good options) to recommend. "
-        "If you cannot find any suitable restaurants in the shared area, "
-        "call the final selection tool with `selected: []`."
-        + excluded_section
-        + feedback
-        + "\n\nGroup preferences:\n"
-        + preferences
-        + "\n\nThe search_restaurants tool returns candidate restaurants as lines like:\n"
-        "- mapbox_id=123abc, name=The Burger Joint, address=123 Main St, coordinates=(-87.623, 41.881)\n"
-        "Each result corresponds to a real Mapbox feature. The value after `mapbox_id=` is the "
-        "exact ID you must use as `id` in your final selection. Do not make up IDs like `mapbox_id_1` "
-        "or `restaurant_2`; copy the real alphanumeric value exactly as shown. "
-        "If a result has no `mapbox_id`, do not select it.\n\n"
-        "When selecting, produce entries in this form:\n"
-        "- id: <real mapbox_id from the result line>\n"
-        "  name: <name from the result line>\n"
-        "  address: <address from the result line, or null if missing>\n"
-        "  coordinates: [<longitude>, <latitude>]  # use the numbers shown in the result line\n\n"
-        "Only select candidates that were actually returned by search_restaurants. "
-        "If the tool returns no good options, call it again with a simpler or broader query before selecting.\n\n"
-        "IMPORTANT: Call the search_restaurants tool as many times as you need first. "
-        "Only call the final selection tool by itself, once you are done searching, and "
-        "never call it more than once or alongside another tool call."
-        "You can only call tools a limited number of times. If you exhaust your allotted tool calls, make your recommendations "
-        "based on the best options you have found so far."
+    feedback = feedback_summary if feedback_summary.strip() else "None"
+
+    template_path = Path(__file__).parent / "prompts" / "planner_prompt.md"
+    template = template_path.read_text(encoding="utf-8")
+    return template.format(
+        excluded_count=len(excluded_ids or []),
+        excluded_section=excluded_section,
+        feedback=feedback,
+        preferences=preferences,
     )

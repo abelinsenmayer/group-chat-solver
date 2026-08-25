@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import logging
+from pathlib import Path
 
 from langchain.agents import create_agent
 
@@ -108,23 +109,11 @@ def _recover_structured_response(messages: list) -> JudgeVerdict | None:
 
 
 def _judge_prompt(person: PersonPayload, suggestion: RestaurantSuggestion, report: ResearchReport) -> str:
-    report_section = (
-        f"Research report for {suggestion.name}:\n{report.summary}\n"
-        if report.summary
-        else "No research report is available."
-    )
-    return (
-        f"You are representing {person.name} and their preferences: {person.preferences}.\n\n"
-        f"Restaurant: {suggestion.name}\n"
-        f"Address: {suggestion.address or 'unknown'}\n\n"
-        f"{report_section}\n\n"
-        "Evaluate whether the restaurant satisfies these preferences. "
-        "Return 'approved' if the restaurant clearly satisfies the preferences, leaving "
-        "short_reason and feedback empty. "
-        "Return 'rejected' if it does not, and also provide:\n"
-        "- short_reason: a short punchy tag of at most 5 words (e.g. 'Too expensive!', "
-        "'No vegetarian options') summarizing why it was rejected.\n"
-        "- feedback: a short feedback paragraph (at most a few sentences) explaining the "
-        "rejection in more detail.\n\n"
-        "IMPORTANT: Do not call any tools. Only call the final verdict tool once, by itself."
+    template_path = Path(__file__).parent / "prompts" / "judge_prompt.md"
+    template = template_path.read_text(encoding="utf-8")
+    return template.format(
+        person_preferences=person.preferences,
+        restaurant_name=suggestion.name,
+        restaurant_address=suggestion.address or "unknown",
+        report_summary=report.summary or "None",
     )

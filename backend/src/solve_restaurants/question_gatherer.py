@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import logging
+from pathlib import Path
 
 from langchain.agents import create_agent
 
@@ -83,12 +84,10 @@ def _recover_structured_response(messages: list) -> JudgeResearchQuestions | Non
 
 
 def _question_gatherer_prompt(person: PersonPayload, suggestion: RestaurantSuggestion) -> str:
-    return (
-        f"You are representing {person.name} and their preferences: {person.preferences}.\n\n"
-        f"Restaurant: {suggestion.name}\n"
-        f"Address: {suggestion.address or 'unknown'}\n\n"
-        "Before deciding whether this restaurant satisfies the preferences above, what are the "
-        "most important factual questions a web search should answer? Return a short list of "
-        "questions (typically 1–3). Only ask about things that can be researched online, such as "
-        "menu items, dietary options, price range, or reviews."
+    template_path = Path(__file__).parent / "prompts" / "question_gatherer_prompt.md"
+    template = template_path.read_text(encoding="utf-8")
+    return template.format(
+        person_preferences=person.preferences,
+        restaurant_name=suggestion.name,
+        restaurant_address=suggestion.address or "unknown",
     )

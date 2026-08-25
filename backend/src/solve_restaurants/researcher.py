@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import logging
+from pathlib import Path
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import ToolCallLimitMiddleware
@@ -158,16 +159,11 @@ def _recover_structured_response(messages: list) -> ResearchReport | None:
 
 
 def _researcher_prompt(suggestion: RestaurantSuggestion, questions: list[str]) -> str:
-    questions_section = "\n".join(f"- {q}" for q in questions) or "- General information about this restaurant"
-    return (
-        f"You are a research assistant. Research the following restaurant using the web_search tool.\n\n"
-        f"Restaurant: {suggestion.name}\n"
-        f"Address: {suggestion.address or 'unknown'}\n\n"
-        f"The judges want to know:\n{questions_section}\n\n"
-        "Use the web_search tool as many times as you need (up to the tool limit). "
-        "Then produce a concise ResearchReport with:\n"
-        "- summary: a short paragraph of the most relevant findings for the judges' questions\n"
-        "- sources: a list of source URLs from the search results\n\n"
-        "Only call the final ResearchReport tool by itself, once you are done researching, and "
-        "never call it more than once or alongside another tool call."
+    questions_section = "\n".join(f"- {q}" for q in questions) or "None"
+    template_path = Path(__file__).parent / "prompts" / "researcher_prompt.md"
+    template = template_path.read_text(encoding="utf-8")
+    return template.format(
+        restaurant_name=suggestion.name,
+        restaurant_address=suggestion.address or "unknown",
+        questions_section=questions_section,
     )
