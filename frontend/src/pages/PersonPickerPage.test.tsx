@@ -152,3 +152,40 @@ test('cancels editing without changing the person', async () => {
   expect(screen.getByText('“Outdoor seating preferred”')).toBeInTheDocument()
   expect(onPeopleLoaded).not.toHaveBeenCalled()
 })
+
+test('renders error and prevents Next when too many people are selected', async () => {
+  const user = userEvent.setup()
+  const onPeopleLoaded = vi.fn()
+
+  const mockedPeople: Person[] = Array.from({ length: 9 }, (_, i) => ({
+    id: i,
+    name: `Person ${i}`,
+    preferences: `Preference ${i}`,
+    location: {
+      latitude: 0,
+      longitude: 0,
+    },
+    availability: {
+      start: '09:00',
+      end: '17:00',
+    },
+  }))
+
+  render(
+    <PersonPickerPage
+      initialPeople={mockedPeople}
+      onNext={vi.fn()}
+      onBack={vi.fn()}
+      onPeopleLoaded={onPeopleLoaded}
+    />,
+  )
+  
+  // Select all people
+  for (let i = 0; i < 9; i++) {
+    await user.click(screen.getByRole('button', { name: `Select Person ${i}` }))
+  }
+
+  // Verify error message and disabled Next button
+  expect(screen.getByTestId('too-many-people-error')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /next/i })).toBeDisabled()
+})

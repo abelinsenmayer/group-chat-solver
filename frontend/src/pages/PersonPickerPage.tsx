@@ -160,13 +160,18 @@ export default function PersonPickerPage({ onNext, onBack, initialPeople, onPeop
         </button>
         <button
           type="button"
-          disabled={selectedPeople.length === 0}
+          disabled={selectedPeople.length === 0 || selectedPeople.length > 8}
           onClick={() => onNext(selectedPeople)}
           className="rounded-md border-2 border-secondary px-5 py-2 font-bold text-secondary transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-secondary"
         >
           Next <span aria-hidden="true">→</span>
         </button>
       </div>
+      {selectedPeople.length > 8 && (
+        <p data-testid="too-many-people-error" className="text-destructive text-sm w-full text-right">
+          Select 8 or fewer people to continue
+        </p>
+      )}
     </main>
   )
 }

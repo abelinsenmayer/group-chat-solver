@@ -161,8 +161,6 @@ def find_pois_in_polygon(
     if category:
         params["poi_category"] = category
 
-    logger.debug("Searching for POIs with params=%s", params)
-
     response = requests.get(url, params=params, timeout=30)
     response.raise_for_status()
 
@@ -224,9 +222,7 @@ def find_reachable_area(
         "access_token": access_token,
     }
 
-    logger.info("Mapbox request: %s %s", url, params)
     response = requests.get(url, params=params, timeout=30)
-    logger.info("Mapbox response: %s", response.json())
     response.raise_for_status()
 
     data = response.json()

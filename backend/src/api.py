@@ -83,6 +83,9 @@ def get_reachable_areas(request: ReachableAreasRequest) -> dict[str, object]:
 @app.post("/api/solve-restaurants")
 async def solve_restaurants(request: SolveRestaurantsRequest) -> dict[str, object]:
     people = people_from_request(request.people)
+
+    if len(people) > 8:
+        raise HTTPException(status_code=422, detail="Too many people (max 8)")
     
     try:
         check_people_for_input_risks(people)

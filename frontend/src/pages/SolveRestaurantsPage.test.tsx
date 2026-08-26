@@ -74,7 +74,7 @@ test('shows an error message when the solver fails to start', async () => {
 })
 
 test('shows a user-friendly message when the solver rejects input as invalid', async () => {
-  vi.mocked(fetchSolveRestaurants).mockRejectedValue(new Error('The input could not be processed.'))
+  vi.mocked(fetchSolveRestaurants).mockRejectedValue(new Error('The input could not be processed or contained a security risk. Try rephrasing custom inputs.'))
   const user = userEvent.setup()
 
   render(<SolveRestaurantsPage people={[elena]} overlap={overlap} onBack={vi.fn()} />)
