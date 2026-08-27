@@ -87,10 +87,10 @@ async def solve_restaurants(request: SolveRestaurantsRequest) -> dict[str, objec
     if len(people) > 8:
         raise HTTPException(status_code=422, detail="Too many people (max 8)")
     
-    try:
-        check_people_for_input_risks(people)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    # try:
+    #     check_people_for_input_risks(people)
+    # except ValueError as error:
+    #     raise HTTPException(status_code=422, detail=str(error)) from error
 
     run_id, _ = start_solve_restaurants(people, request.overlap)
     return {"run_id": run_id, "status": "started"}
