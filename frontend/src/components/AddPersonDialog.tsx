@@ -96,6 +96,15 @@ function validateField(field: FieldName, values: FormValues, existingNames: stri
       if (values.availStart && values.availEnd <= values.availStart) {
         return 'End time must be after start time.'
       }
+      
+      const toHours = (time: String) => {
+        const [hours, minutes] = time.split(':').map(Number)
+        return hours + minutes / 60
+      }
+
+      if (toHours(values.availEnd) - toHours(values.availStart) < 2) {
+        return 'Availability window must be at least 2 hours long'
+      }
       return undefined
     }
   }
