@@ -1,6 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
+import {
+  getAddressSuggestions,
+  retrieveAddressSuggestion,
+  type AddressSuggestion,
+} from '@/lib/geocode'
 import { fetchPeople, type Person } from '../lib/people-api'
 import PersonPickerPage from './PersonPickerPage'
 
@@ -8,6 +13,17 @@ vi.mock('../lib/people-api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/people-api')>()),
   fetchPeople: vi.fn(),
 }))
+
+vi.mock('@/lib/geocode', () => ({
+  getAddressSuggestions: vi.fn(),
+  retrieveAddressSuggestion: vi.fn(),
+}))
+
+const somewhereSuggestion = {
+  mapbox_id: 'somewhere-id',
+  name: 'Somewhere',
+  full_address: 'Somewhere, New York, NY',
+} as unknown as AddressSuggestion
 
 const elena: Person = {
   name: 'Elena',
@@ -59,8 +75,13 @@ test('calls onPeopleLoaded with updated list when a custom person is added', asy
 
   await user.type(screen.getByLabelText(/name/i), 'Custom')
   await user.type(screen.getByLabelText(/preferences/i), 'Likes pizza')
-  await user.type(screen.getByLabelText(/latitude/i), '40')
-  await user.type(screen.getByLabelText(/longitude/i), '-74')
+
+  vi.mocked(getAddressSuggestions).mockResolvedValue([somewhereSuggestion])
+  vi.mocked(retrieveAddressSuggestion).mockResolvedValue({ latitude: 40, longitude: -74, address: 'Somewhere' })
+  await user.type(screen.getByLabelText(/address/i), 'Somewhere')
+  await user.click(screen.getByRole('button', { name: /find address/i }))
+  await user.click(await screen.findByRole('button', { name: /somewhere/i }))
+  await waitFor(() => expect(screen.getByText(/using somewhere/i)).toBeInTheDocument())
 
   await user.click(screen.getByRole('button', { name: /add person/i }))
 

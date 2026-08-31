@@ -85,7 +85,7 @@ test('returns a user-friendly message when the solve-restaurants endpoint respon
   vi.stubGlobal('fetch', fetchMock)
 
   await expect(fetchSolveRestaurants(people, { type: 'Polygon', coordinates: [] })).rejects.toThrow(
-    'The input could not be processed.',
+    /The input could not be processed/,
   )
 })
 

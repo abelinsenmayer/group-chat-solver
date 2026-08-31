@@ -1,9 +1,25 @@
 import { type ComponentProps } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, test, vi } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
+import {
+  getAddressSuggestions,
+  retrieveAddressSuggestion,
+  type AddressSuggestion,
+} from '@/lib/geocode'
 import type { Person } from '../lib/people-api'
 import AddPersonDialog from './AddPersonDialog'
+
+vi.mock('@/lib/geocode', () => ({
+  getAddressSuggestions: vi.fn(),
+  retrieveAddressSuggestion: vi.fn(),
+}))
+
+const somewhereSuggestion = {
+  mapbox_id: 'somewhere-id',
+  name: 'Somewhere',
+  full_address: 'Somewhere, New York, NY',
+} as unknown as AddressSuggestion
 
 const elena: Person = {
   name: 'Elena',
@@ -11,6 +27,11 @@ const elena: Person = {
   location: { latitude: 40.7589, longitude: -73.9851 },
   preferences: 'Outdoor seating preferred',
 }
+
+beforeEach(() => {
+  vi.mocked(getAddressSuggestions).mockReset()
+  vi.mocked(retrieveAddressSuggestion).mockReset()
+})
 
 function renderDialog(props: Partial<ComponentProps<typeof AddPersonDialog>> = {}) {
   const defaults = {
@@ -23,11 +44,25 @@ function renderDialog(props: Partial<ComponentProps<typeof AddPersonDialog>> = {
   return { ...render(<AddPersonDialog {...defaults} />), ...defaults }
 }
 
+// Coordinates are only reachable through the LocationPicker now, so tests drive the real picker UI
+// with a stubbed geocode lookup.
+async function pickLocation(
+  user: ReturnType<typeof userEvent.setup>,
+  latitude = 40.7128,
+  longitude = -74.006,
+) {
+  vi.mocked(getAddressSuggestions).mockResolvedValue([somewhereSuggestion])
+  vi.mocked(retrieveAddressSuggestion).mockResolvedValue({ latitude, longitude, address: 'Somewhere' })
+  await user.type(screen.getByLabelText(/address/i), 'Somewhere')
+  await user.click(screen.getByRole('button', { name: /find address/i }))
+  await user.click(await screen.findByRole('button', { name: /somewhere/i }))
+  await waitFor(() => expect(screen.getByText(/using somewhere/i)).toBeInTheDocument())
+}
+
 async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/name/i), 'Alice')
   await user.type(screen.getByLabelText(/preferences/i), 'Loves sushi')
-  await user.type(screen.getByLabelText(/latitude/i), '40.7128')
-  await user.type(screen.getByLabelText(/longitude/i), '-74.006')
+  await pickLocation(user)
 }
 
 describe('AddPersonDialog', () => {
@@ -38,8 +73,6 @@ describe('AddPersonDialog', () => {
     expect(screen.getByRole('heading', { name: /edit elena/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/name/i)).toHaveValue('Elena')
     expect(screen.getByLabelText(/preferences/i)).toHaveValue('Outdoor seating preferred')
-    expect(screen.getByLabelText(/latitude/i)).toHaveValue(40.7589)
-    expect(screen.getByLabelText(/longitude/i)).toHaveValue(-73.9851)
     expect(screen.getByLabelText(/available from/i)).toHaveValue('17:30')
     expect(screen.getByLabelText(/available until/i)).toHaveValue('20:00')
 
@@ -72,15 +105,56 @@ describe('AddPersonDialog', () => {
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
-  test('renders a form with name, preferences, coordinates, and availability fields', () => {
+  test('renders a form with name, preferences, a location picker, and availability fields', () => {
     renderDialog()
 
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/preferences/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/latitude/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/longitude/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/address/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/available from/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/available until/i)).toBeInTheDocument()
+  })
+
+  test('blocks submission until a location has been chosen', async () => {
+    const user = userEvent.setup()
+    const { onSubmit } = renderDialog()
+
+    await user.type(screen.getByLabelText(/name/i), 'Alice')
+    await user.type(screen.getByLabelText(/preferences/i), 'Loves sushi')
+    await user.click(screen.getByRole('button', { name: /add person/i }))
+
+    expect(screen.getByText(/choose a location/i)).toBeInTheDocument()
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  test('submits once a location has been chosen', async () => {
+    const user = userEvent.setup()
+    const { onSubmit } = renderDialog()
+
+    await user.type(screen.getByLabelText(/name/i), 'Alice')
+    await user.type(screen.getByLabelText(/preferences/i), 'Loves sushi')
+    await user.click(screen.getByRole('button', { name: /add person/i }))
+    expect(screen.getByText(/choose a location/i)).toBeInTheDocument()
+
+    await pickLocation(user, 40.7128, -74.006)
+    await user.click(screen.getByRole('button', { name: /add person/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ location: { latitude: 40.7128, longitude: -74.006 } }),
+    )
+  })
+
+  test('rejects an out-of-range longitude produced by dragging across world copies', async () => {
+    const user = userEvent.setup()
+    const { onSubmit } = renderDialog()
+
+    await user.type(screen.getByLabelText(/name/i), 'Alice')
+    await user.type(screen.getByLabelText(/preferences/i), 'Loves sushi')
+    await pickLocation(user, 40.7128, -184.5)
+    await user.click(screen.getByRole('button', { name: /add person/i }))
+
+    expect(screen.getByText(/longitude must be between/i)).toBeInTheDocument()
+    expect(onSubmit).not.toHaveBeenCalled()
   })
 
   test('enforces maxLength on name and preferences fields', () => {
@@ -131,8 +205,7 @@ describe('AddPersonDialog', () => {
 
     await user.type(screen.getByLabelText(/name/i), 'Alice')
     await user.type(screen.getByLabelText(/preferences/i), 'test')
-    await user.type(screen.getByLabelText(/latitude/i), '40')
-    await user.type(screen.getByLabelText(/longitude/i), '-74')
+    await pickLocation(user)
     await user.click(screen.getByRole('button', { name: /add person/i }))
 
     expect(screen.getByText(/name already exists/i)).toBeInTheDocument()
@@ -145,39 +218,23 @@ describe('AddPersonDialog', () => {
 
     await user.type(screen.getByLabelText(/name/i), 'alice')
     await user.type(screen.getByLabelText(/preferences/i), 'test')
-    await user.type(screen.getByLabelText(/latitude/i), '40')
-    await user.type(screen.getByLabelText(/longitude/i), '-74')
+    await pickLocation(user)
     await user.click(screen.getByRole('button', { name: /add person/i }))
 
     expect(screen.getByText(/name already exists/i)).toBeInTheDocument()
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
-  test('shows error when latitude is out of range', async () => {
+  test('rejects an out-of-range latitude', async () => {
     const user = userEvent.setup()
     const { onSubmit } = renderDialog()
 
     await user.type(screen.getByLabelText(/name/i), 'Test')
     await user.type(screen.getByLabelText(/preferences/i), 'test')
-    await user.type(screen.getByLabelText(/latitude/i), '91')
-    await user.type(screen.getByLabelText(/longitude/i), '-74')
+    await pickLocation(user, 91, -74)
     await user.click(screen.getByRole('button', { name: /add person/i }))
 
     expect(screen.getByText(/latitude must be between/i)).toBeInTheDocument()
-    expect(onSubmit).not.toHaveBeenCalled()
-  })
-
-  test('shows error when longitude is out of range', async () => {
-    const user = userEvent.setup()
-    const { onSubmit } = renderDialog()
-
-    await user.type(screen.getByLabelText(/name/i), 'Test')
-    await user.type(screen.getByLabelText(/preferences/i), 'test')
-    await user.type(screen.getByLabelText(/latitude/i), '40')
-    await user.type(screen.getByLabelText(/longitude/i), '181')
-    await user.click(screen.getByRole('button', { name: /add person/i }))
-
-    expect(screen.getByText(/longitude must be between/i)).toBeInTheDocument()
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
@@ -187,8 +244,7 @@ describe('AddPersonDialog', () => {
 
     await user.type(screen.getByLabelText(/name/i), 'Test')
     await user.type(screen.getByLabelText(/preferences/i), 'test')
-    await user.type(screen.getByLabelText(/latitude/i), '40')
-    await user.type(screen.getByLabelText(/longitude/i), '-74')
+    await pickLocation(user)
 
     const startInput = screen.getByLabelText(/available from/i)
     const endInput = screen.getByLabelText(/available until/i)
@@ -212,16 +268,6 @@ describe('AddPersonDialog', () => {
     expect(screen.getByText(/name is required/i)).toBeInTheDocument()
   })
 
-  test('shows error on blur when latitude is out of range', async () => {
-    const user = userEvent.setup()
-    renderDialog()
-
-    await user.type(screen.getByLabelText(/latitude/i), '91')
-    await user.tab()
-
-    expect(screen.getByText(/latitude must be between/i)).toBeInTheDocument()
-  })
-
   test('shows error on blur when a duplicate name is entered', async () => {
     const user = userEvent.setup()
     renderDialog({ existingNames: ['Alice'] })
@@ -236,13 +282,13 @@ describe('AddPersonDialog', () => {
     const user = userEvent.setup()
     renderDialog()
 
-    const latInput = screen.getByLabelText(/latitude/i)
-    await user.type(latInput, '40.7128')
+    const nameInput = screen.getByLabelText(/name/i)
+    await user.type(nameInput, 'Alice')
     await user.tab()
 
-    expect(latInput).toHaveValue(40.7128)
-    expect(screen.queryByText(/latitude must be between/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/latitude is required/i)).not.toBeInTheDocument()
+    expect(nameInput).toHaveValue('Alice')
+    expect(screen.queryByText(/name is required/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/name already exists/i)).not.toBeInTheDocument()
   })
 
   test('shows availability error on blur when end time is not after start time', async () => {
@@ -257,37 +303,37 @@ describe('AddPersonDialog', () => {
     expect(screen.getByText(/end time must be after start time/i)).toBeInTheDocument()
   })
 
-  test('keeps the error visible while the edited value is still invalid', async () => {
+  test('keeps an error visible while the edited value is still invalid', async () => {
     const user = userEvent.setup()
-    renderDialog()
+    renderDialog({ existingNames: ['Alice'] })
 
-    const latInput = screen.getByLabelText(/latitude/i)
-    await user.type(latInput, '91')
+    const nameInput = screen.getByLabelText(/name/i)
+    await user.type(nameInput, 'Alice')
     await user.tab()
 
-    expect(screen.getByText(/latitude must be between/i)).toBeInTheDocument()
+    expect(screen.getByText(/name already exists/i)).toBeInTheDocument()
 
-    await user.type(latInput, '1')
+    // Editing to another invalid value re-reports rather than silently dropping the error.
+    await user.clear(nameInput)
 
-    expect(screen.getByText(/latitude must be between/i)).toBeInTheDocument()
+    expect(screen.getByText(/name is required/i)).toBeInTheDocument()
   })
 
   test('clears error when user edits the invalid field', async () => {
     const user = userEvent.setup()
-    renderDialog()
+    renderDialog({ existingNames: ['Alice'] })
 
-    await user.type(screen.getByLabelText(/latitude/i), '91')
-    await user.type(screen.getByLabelText(/name/i), 'Test')
+    await user.type(screen.getByLabelText(/name/i), 'Alice')
     await user.type(screen.getByLabelText(/preferences/i), 'test')
-    await user.type(screen.getByLabelText(/longitude/i), '-74')
+    await pickLocation(user)
     await user.click(screen.getByRole('button', { name: /add person/i }))
 
-    expect(screen.getByText(/latitude must be between/i)).toBeInTheDocument()
+    expect(screen.getByText(/name already exists/i)).toBeInTheDocument()
 
-    await user.clear(screen.getByLabelText(/latitude/i))
-    await user.type(screen.getByLabelText(/latitude/i), '40')
+    await user.clear(screen.getByLabelText(/name/i))
+    await user.type(screen.getByLabelText(/name/i), 'Bob')
 
-    expect(screen.queryByText(/latitude must be between/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/name already exists/i)).not.toBeInTheDocument()
   })
 
   test('resets form when dialog is closed via cancel', async () => {

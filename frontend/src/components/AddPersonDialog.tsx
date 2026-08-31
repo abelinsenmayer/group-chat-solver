@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type { Person } from '@/lib/people-api'
+import { LocationPicker } from './LocationPicker'
 
 const MAX_NAME_LENGTH = 80
 const MAX_PREFERENCES_LENGTH = 500
@@ -55,10 +56,13 @@ function normalizeName(value: string) {
   return value.trim().toLowerCase()
 }
 
+// Coordinates are set by the LocationPicker rather than typed, so an empty value means the user
+// never picked a location. Out-of-range values are still possible: dragging the map marker across
+// world copies reports an unwrapped longitude.
 function validateCoordinate(raw: string, label: string, limit: number) {
   const trimmed = raw.trim()
   const parsed = Number(trimmed)
-  if (!trimmed || !Number.isFinite(parsed)) return `${label} is required.`
+  if (!trimmed || !Number.isFinite(parsed)) return 'Choose a location using the address or map picker.'
   if (parsed < -limit || parsed > limit) return `${label} must be between -${limit} and ${limit}.`
   return undefined
 }
@@ -158,11 +162,20 @@ export default function AddPersonDialog({
     }
   }
 
-  function handleChange(field: FieldName, value: string) {
-    const nextValues = { ...values, [field]: value }
+  // Takes a partial update rather than a single field so that related fields (latitude and
+  // longitude) are applied in one state transition. Updating them through two successive calls
+  // would have each call derive its next state from the same stale `values`, dropping one of them.
+  function applyChanges(updates: Partial<FormValues>) {
+    const nextValues = { ...values, ...updates }
     setValues(nextValues)
-    if (errors[field]) revalidate(field, nextValues)
-    else if (field === 'availStart' && errors.availEnd) revalidate(field, nextValues)
+    for (const field of Object.keys(updates) as FieldName[]) {
+      if (errors[field]) revalidate(field, nextValues)
+      else if (field === 'availStart' && errors.availEnd) revalidate(field, nextValues)
+    }
+  }
+
+  function handleChange(field: FieldName, value: string) {
+    applyChanges({ [field]: value })
   }
 
   function handleBlur(field: FieldName) {
@@ -201,6 +214,9 @@ export default function AddPersonDialog({
   const fieldClassName =
     'border-2 border-secondary/50 bg-background text-sm text-secondary focus-visible:border-secondary focus-visible:ring-0'
   const editing = initialPerson !== undefined
+  // Both halves of an unset coordinate report the same "pick a location" message, so only one is
+  // shown.
+  const locationError = errors.latitude ?? errors.longitude
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -269,51 +285,17 @@ export default function AddPersonDialog({
             )}
           </div>
 
-          <div className="flex gap-3">
-            <div className="flex flex-1 flex-col gap-1">
-              <Label htmlFor="add-person-lat" className="text-sm font-bold text-secondary">
-                Latitude
-              </Label>
-              <Input
-                id="add-person-lat"
-                type="number"
-                step="any"
-                value={values.latitude}
-                onChange={(e) => handleChange('latitude', e.target.value)}
-                onBlur={() => handleBlur('latitude')}
-                placeholder="e.g. 40.7128"
-                aria-invalid={!!errors.latitude}
-                aria-describedby={errors.latitude ? 'add-person-lat-error' : undefined}
-                className={fieldClassName}
-              />
-              {errors.latitude && (
-                <p id="add-person-lat-error" role="alert" className="text-xs text-red-600">
-                  {errors.latitude}
-                </p>
-              )}
-            </div>
-            <div className="flex flex-1 flex-col gap-1">
-              <Label htmlFor="add-person-lng" className="text-sm font-bold text-secondary">
-                Longitude
-              </Label>
-              <Input
-                id="add-person-lng"
-                type="number"
-                step="any"
-                value={values.longitude}
-                onChange={(e) => handleChange('longitude', e.target.value)}
-                onBlur={() => handleBlur('longitude')}
-                placeholder="e.g. -74.0060"
-                aria-invalid={!!errors.longitude}
-                aria-describedby={errors.longitude ? 'add-person-lng-error' : undefined}
-                className={fieldClassName}
-              />
-              {errors.longitude && (
-                <p id="add-person-lng-error" role="alert" className="text-xs text-red-600">
-                  {errors.longitude}
-                </p>
-              )}
-            </div>
+          <div className="flex flex-col gap-1">
+            <LocationPicker
+              latitude={values.latitude}
+              longitude={values.longitude}
+              onLocationChange={applyChanges}
+            />
+            {locationError && (
+              <p id="add-person-location-error" role="alert" className="text-xs text-red-600">
+                {locationError}
+              </p>
+            )}
           </div>
 
           <div className="flex gap-3">

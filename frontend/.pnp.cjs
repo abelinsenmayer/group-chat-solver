@@ -28,6 +28,7 @@ const RAW_RUNTIME_STATE =
       [null, {\
         "packageLocation": "./",\
         "packageDependencies": [\
+          ["@mapbox/search-js-core", "npm:1.6.0"],\
           ["@tailwindcss/vite", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:4.3.3"],\
           ["@testing-library/dom", "npm:10.4.1"],\
           ["@testing-library/jest-dom", "npm:6.9.1"],\
@@ -908,6 +909,16 @@ const RAW_RUNTIME_STATE =
           ["@jridgewell/resolve-uri", "npm:3.1.2"],\
           ["@jridgewell/sourcemap-codec", "npm:1.5.5"],\
           ["@jridgewell/trace-mapping", "npm:0.3.31"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["@mapbox/search-js-core", [\
+      ["npm:1.6.0", {\
+        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/@mapbox-search-js-core-npm-1.6.0-f14a4aeb05-10c0.zip/node_modules/@mapbox/search-js-core/",\
+        "packageDependencies": [\
+          ["@mapbox/search-js-core", "npm:1.6.0"],\
+          ["@types/geojson", "npm:7946.0.16"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -3320,6 +3331,15 @@ const RAW_RUNTIME_STATE =
         "linkType": "HARD"\
       }]\
     ]],\
+    ["@types/geojson", [\
+      ["npm:7946.0.16", {\
+        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/@types-geojson-npm-7946.0.16-7a73d95991-10c0.zip/node_modules/@types/geojson/",\
+        "packageDependencies": [\
+          ["@types/geojson", "npm:7946.0.16"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
     ["@types/hast", [\
       ["npm:3.0.5", {\
         "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/@types-hast-npm-3.0.5-628714a5d8-10c0.zip/node_modules/@types/hast/",\
@@ -4126,6 +4146,7 @@ const RAW_RUNTIME_STATE =
       ["workspace:.", {\
         "packageLocation": "./",\
         "packageDependencies": [\
+          ["@mapbox/search-js-core", "npm:1.6.0"],\
           ["@tailwindcss/vite", "virtual:665ef6e490d82fa4f22b7a0f44465d4ba9a0c746046614ea47dda3be38bdf546ec7e3ed715a2c467d2d4dadf3dd36abf4ef3423ef106ff1e0906f0a57a9f6132#npm:4.3.3"],\
           ["@testing-library/dom", "npm:10.4.1"],\
           ["@testing-library/jest-dom", "npm:6.9.1"],\
