@@ -8,6 +8,30 @@ beforeEach(() => {
   vi.spyOn(peopleApi, 'wakeUpBackend').mockResolvedValue(undefined)
 })
 
+test('shows horizontal bubble tracks on mobile with opposite directions', () => {
+  vi.spyOn(peopleApi, 'wakeUpBackend').mockImplementation(() => new Promise(() => {}))
+  const { container } = render(<LandingPage onStart={vi.fn()} />)
+
+  const topTrack = container.querySelector('[data-bubble-track="top"]')
+  const bottomTrack = container.querySelector('[data-bubble-track="bottom"]')
+
+  expect(topTrack).toHaveClass('flex', 'lg:hidden')
+  expect(bottomTrack).toHaveClass('flex', 'lg:hidden')
+  expect(topTrack?.firstElementChild).toHaveClass('animate-bubble-scroll-right')
+  expect(bottomTrack?.firstElementChild).toHaveClass('animate-bubble-scroll-left')
+  expect(topTrack?.querySelector('.bubble-top')).toBeInTheDocument()
+  expect(bottomTrack?.querySelector('.bubble-bottom')).toBeInTheDocument()
+})
+
+test('keeps vertical bubble columns visible only on desktop', () => {
+  vi.spyOn(peopleApi, 'wakeUpBackend').mockImplementation(() => new Promise(() => {}))
+  const { container } = render(<LandingPage onStart={vi.fn()} />)
+  const columns = container.querySelectorAll('[data-bubble-column]')
+
+  expect(columns).toHaveLength(2)
+  columns.forEach((column) => expect(column).toHaveClass('hidden', 'lg:block'))
+})
+
 test('shows a disabled warming button while the backend is waking up', () => {
   vi.spyOn(peopleApi, 'wakeUpBackend').mockImplementation(() => new Promise(() => {}))
   render(<LandingPage onStart={vi.fn()} />)

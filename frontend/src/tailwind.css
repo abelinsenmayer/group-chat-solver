@@ -80,6 +80,32 @@ select {
   animation: bubble-scroll-down 28s linear infinite;
 }
 
+@keyframes bubble-scroll-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes bubble-scroll-right {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@utility animate-bubble-scroll-left {
+  animation: bubble-scroll-left 28s linear infinite;
+}
+
+@utility animate-bubble-scroll-right {
+  animation: bubble-scroll-right 28s linear infinite;
+}
+
 .bubble {
   position: relative;
   flex-shrink: 0;
@@ -112,4 +138,25 @@ select {
 .bubble-right::before {
   right: -0.6rem;
   clip-path: polygon(0 0, 0 100%, 100% 100%);
+}
+
+.bubble-top {
+  border-top-left-radius: 0;
+}
+
+.bubble-top::before {
+  top: -0.6rem;
+  bottom: auto;
+  left: 0;
+  clip-path: polygon(0 100%, 0 0, 100% 100%);
+}
+
+.bubble-bottom {
+  border-bottom-right-radius: 0;
+}
+
+.bubble-bottom::before {
+  right: 0;
+  bottom: -0.6rem;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
 }

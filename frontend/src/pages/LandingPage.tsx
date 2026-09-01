@@ -60,6 +60,7 @@ function ChatBubbleColumn({ side, className }: ChatBubbleColumnProps) {
   return (
     <div
       className={cn('pointer-events-none relative overflow-hidden', className)}
+      data-bubble-column={side}
       aria-hidden="true"
     >
       <div
@@ -94,9 +95,56 @@ function ChatBubbleColumn({ side, className }: ChatBubbleColumnProps) {
   )
 }
 
+type ChatBubbleRowProps = {
+  edge: 'top' | 'bottom'
+  className?: string
+}
+
+function ChatBubbleRow({ edge, className }: ChatBubbleRowProps) {
+  const bubbles = useMemo(() => generateBubbles(), [])
+  const isTop = edge === 'top'
+  const bubbleClass = isTop ? 'bubble bubble-top' : 'bubble bubble-bottom'
+  const animationClass = isTop
+    ? 'animate-bubble-scroll-right'
+    : 'animate-bubble-scroll-left'
+
+  return (
+    <div
+      className={cn('pointer-events-none overflow-hidden', className)}
+      data-bubble-track={edge}
+      aria-hidden="true"
+    >
+      <div
+        className={cn('flex w-max will-change-transform', animationClass)}
+        style={isTop ? { transform: 'translateX(-50%)' } : undefined}
+      >
+        {[0, 1].map((i) => (
+          <div key={i} className="flex shrink-0 items-center gap-5 px-2">
+            {bubbles.map((bubble, index) => (
+              <span
+                key={`${i}-${index}`}
+                className={bubbleClass}
+                style={{
+                  color: bubble.color,
+                  width: bubble.width,
+                  height: bubble.height,
+                  marginTop: isTop ? bubble.margin : undefined,
+                  marginBottom: isTop ? undefined : bubble.margin,
+                }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function LandingPage({ onStart }: LandingPageProps) {
   return (
     <div className="relative min-h-screen overflow-hidden">
+      <ChatBubbleRow edge="top" className="absolute left-0 top-0 flex h-28 w-full items-start py-3 lg:hidden" />
+      <ChatBubbleRow edge="bottom" className="absolute bottom-0 left-0 flex h-28 w-full items-end py-3 lg:hidden" />
       <ChatBubbleColumn
         side="left"
         className="absolute left-0 top-0 hidden h-screen w-48 lg:block"
