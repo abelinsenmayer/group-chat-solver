@@ -298,7 +298,7 @@ export default function AddPersonDialog({
             )}
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <div className="flex flex-1 flex-col gap-1">
               <Label htmlFor="add-person-avail-start" className="text-sm font-bold text-secondary">
                 Available from

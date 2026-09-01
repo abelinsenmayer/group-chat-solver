@@ -227,7 +227,7 @@ export default function ReachableAreaMapPage({ people, timeline, onBack, onNext,
       </section>
       {accessToken && (
         <section className="mx-auto grid w-full max-w-5xl items-center gap-8 px-6 pb-10 sm:grid-cols-[12rem_minmax(0,1fr)] sm:px-12" aria-label="Reachable area details">
-          <div className="space-y-8">
+          <div className="space-y-2 sm:space-y-8">
             {legendPeople.map(({ person, travelTimeMinutes }, index) => {
               const color = getPersonAreaColor(index)
               return (

@@ -42,7 +42,7 @@ export default function MeetTheAgentsPage({ people, onBack, onNext }: MeetTheAge
         To find a restaurant that works for everyone, we'll use a team of AI agents. Read on to find out what each agent does and how they work together.
       </p>
 
-      <section className="mt-10">
+      <section className="mt-4 sm:mt-10">
         <h2 className="text-xl font-bold">The Planner</h2>
         <div className="mt-6 space-y-8">
           <AgentCard
@@ -55,7 +55,7 @@ export default function MeetTheAgentsPage({ people, onBack, onNext }: MeetTheAge
         </div>
       </section>
 
-      <section className="mt-10">
+      <section className="mt-4 sm:mt-10">
         <h2 className="text-xl font-bold">The Researcher</h2>
         <p>The Researcher gathers everyone's questions and runs a small number of web searches for each restaurant, sharing one report with all the Judges.</p>
         <div className="mt-6 space-y-8">
@@ -69,10 +69,10 @@ export default function MeetTheAgentsPage({ people, onBack, onNext }: MeetTheAge
         </div>
       </section>
 
-      <section className="mt-10">
+      <section className="mt-4 sm:mt-10">
         <h2 className="text-xl font-bold">The Judges</h2>
         <p>The Judges are responsible for representing each person in the conversation. Once the Planner proposes restaurants, each Judge will evaluate them based on their individual preferences and the shared Researcher report.</p>
-        <div className="mt-6 space-y-8">
+        <div className="mt-6 space-y-4 sm:space-y-8">
           {people.map((person, index) => {
             const color = getPersonAreaColor(index)
             return (

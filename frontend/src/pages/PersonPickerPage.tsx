@@ -83,10 +83,10 @@ export default function PersonPickerPage({ onNext, onBack, initialPeople, onPeop
     <main className="mx-auto min-h-screen max-w-6xl px-6 py-10 sm:px-12 sm:py-16">
       <header className="mx-auto max-w-2xl flex flex-col items-center justify-center">
         <h1 className="text-3xl font-bold tracking-tight text-secondary sm:text-4xl">Who&apos;s in the chat?</h1>
-        <p className="mt-14 text-base text-secondary">Choose the people you want to include in this simulation.</p>
+        <p className="mt-1 sm:mt-14 text-base text-secondary">Choose the people who will help pick the restaurant.</p>
       </header>
 
-      <section className="mt-16" aria-label="Sample people">
+      <section className="mt-2 sm:mt-16" aria-label="Sample people">
         {loading && <p className="text-center text-secondary">Loading sample people...</p>}
 
         {error && (

@@ -40,13 +40,17 @@ function TimelineRange({ start, end, domainStart, domainEnd, color, label }: Tim
   const left = ((startMinutes - domainStart) / (domainEnd - domainStart)) * 100
   const width = ((toMinutes(end) - startMinutes) / (domainEnd - domainStart)) * 100
 
+  // Make sure the timestamps align with the ticks and don't overlap
+  let timestampLeft = width > 30 ? left : left-8
+  let timestampDistance = width > 30 ? width : width+18
+
   return (
     <div className="relative h-15" aria-label={label}>
       <div className="absolute top-5 h-0.5" style={{ left: `${left}%`, width: `${width}%`, backgroundColor: color }} />
       <div className="absolute top-4 h-3 w-0.5" style={{ left: `${left}%`, backgroundColor: color }} />
       <div className="absolute top-4 h-3 w-0.5" style={{ left: `${left + width}%`, backgroundColor: color }} />
-      <span className="absolute top-8 text-xs whitespace-nowrap" style={{ left: `${left}%` }}>{formatTime(start)}</span>
-      <span className="absolute top-8 -translate-x-full text-xs whitespace-nowrap" style={{ left: `${left + width}%` }}>{formatTime(end)}</span>
+      <span className="absolute top-8 text-xs whitespace-nowrap" style={{ left: `${timestampLeft}%` }}>{formatTime(start)}</span>
+      <span className="absolute top-8 -translate-x-full text-xs whitespace-nowrap" style={{ left: `${timestampLeft + timestampDistance}%` }}>{formatTime(end)}</span>
     </div>
   )
 }
@@ -85,20 +89,20 @@ export default function EventTimelinePage({ people, onBack, onNext, initialTimel
       <header className="flex flex-wrap items-start justify-between gap-4 max-w-3xl">
         <div>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">When should we meet?</h1>
-          <p className="mt-6 text-base">
+          <p className="mt-1 sm:mt-6 text-base">
             We found the event time that gives everyone the most time to reach a place they can enjoy.
           </p>
         </div>
         <WhatsHappeningHere title="Event Timeline Optimizer" docFile="event-timeline.md" />
       </header>
 
-      <section className="mt-14" aria-live="polite">
+      <section className="mt-2 sm:mt-14" aria-live="polite">
         {!timeline && !error && <p>Finding the best event time...</p>}
         {error && <p>Unable to load the event timeline.</p>}
         {timeline?.status === 'no_common_availability' && <p className="rounded-md border-2 border-secondary px-4 py-3 font-medium">No time works for every selected person.</p>}
 
         {timeline?.status === 'ok' && timeline.optimal_start_time && timeline.optimal_end_time && (
-          <div className="grid gap-4 border-b-2 border-secondary pb-8 sm:grid-cols-[12rem_1fr] sm:items-center">
+          <div className="grid gap-1 sm:gap-4 border-b-2 border-secondary pb-1 sm:pb-8 sm:grid-cols-[12rem_1fr] sm:items-center">
             <div>
               <p className="font-bold">Event Timeline</p>
               <p className="mt-1 text-sm">{formatRange(timeline.optimal_start_time, timeline.optimal_end_time)}</p>
@@ -114,11 +118,11 @@ export default function EventTimelinePage({ people, onBack, onNext, initialTimel
           </div>
         )}
 
-        <div className="mt-8 space-y-8">
+        <div className="mt-4 sm:mt-8 space-y-2 sm:space-y-8">
           {people.map((person, index) => {
             const color = getPersonAreaColor(index)
             return (
-              <div key={person.name} className="grid gap-4 sm:grid-cols-[12rem_1fr] sm:items-center">
+              <div key={person.name} className="grid gap-1 sm:gap-4 sm:grid-cols-[12rem_1fr] sm:items-center">
                 <div className="flex items-center gap-3">
                   <CircleUserRound className="rounded-full bg-background" color={color} size={34} strokeWidth={2} />
                   <div>
@@ -140,7 +144,7 @@ export default function EventTimelinePage({ people, onBack, onNext, initialTimel
         </div>
       </section>
 
-      <div className="mt-12 flex justify-between">
+      <div className="mt-2 sm:mt-12 flex justify-between">
         <button type="button" onClick={onBack} className="rounded-md border-2 border-secondary px-5 py-2 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary">Back</button>
         <button type="button" disabled={!canContinue} onClick={() => timeline && onNext(timeline)} className="rounded-md border-2 border-secondary px-5 py-2 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-secondary">Next <span aria-hidden="true">→</span></button>
       </div>
