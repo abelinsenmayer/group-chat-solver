@@ -42,10 +42,10 @@ export default function WhatsHappeningHere({ title, docFile }: WhatsHappeningHer
       <DialogTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-md border-2 border-secondary px-4 py-2 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary"
+          className="fixed top-3 right-3 z-50 inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-secondary bg-background p-0 font-bold transition hover:bg-secondary hover:text-background focus-visible:outline-4 focus-visible:outline-primary"
         >
-          <HelpCircle data-icon="inline-start" />
-          What&apos;s happening here?
+          <HelpCircle className="size-5" />
+          <span className="sr-only">What&apos;s happening here?</span>
         </button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] w-[90vw] max-w-4xl overflow-y-auto">

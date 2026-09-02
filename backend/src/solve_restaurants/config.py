@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     ai_provider: str = "ollama"
     google_api_key: str | None = None
     gemini_model: str = "gemini-2.5-flash-lite"
-    gemini_planner_model: str | None = "gemini-3.1-flash-lite"
+    gemini_planner_model: str | None = "gemini-3.7-flash"
     gemini_question_gatherer_model: str | None = "gemini-2.5-flash-lite"
     gemini_researcher_model: str | None = "gemini-3.7-flash"
     gemini_judge_model: str | None = "gemini-3.1-flash-lite"

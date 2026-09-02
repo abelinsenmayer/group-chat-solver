@@ -1,6 +1,7 @@
 docs/
 
 .vscode/
+.superpowers/
 
 # Backend logs
 backend/logs/

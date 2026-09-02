@@ -1,7 +1,16 @@
 import { motion } from 'framer-motion'
 import { useMemo } from 'react'
 
-type WigglyLineProps = {
+type PixelWigglyLineProps = {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  color: string
+  iconRadius?: number
+}
+
+type LegacyWigglyLineProps = {
   x1Pct: number
   y1Pct: number
   x2Pct: number
@@ -10,12 +19,15 @@ type WigglyLineProps = {
   iconRadiusPct?: number
 }
 
+type WigglyLineProps = PixelWigglyLineProps | LegacyWigglyLineProps
+
 function generateWigglyPath(
   x1: number,
   y1: number,
   x2: number,
   y2: number,
-  iconRadiusPct: number,
+  iconRadius: number,
+  amplitude: number,
   phase: number,
 ): string {
   const dx = x2 - x1
@@ -23,21 +35,13 @@ function generateWigglyPath(
   const length = Math.sqrt(dx * dx + dy * dy)
   if (length === 0) return `M ${x1} ${y1}`
 
-  // Normalize direction
   const nx = dx / length
   const ny = dy / length
-
-  // Offset start by icon radius
-  const startX = x1 + nx * iconRadiusPct
-  const startY = y1 + ny * iconRadiusPct
-
-  // Perpendicular direction
+  const startX = x1 + nx * iconRadius
+  const startY = y1 + ny * iconRadius
   const px = -ny
   const py = nx
-
-  // Build path with sine wave segments
   const segments = 8
-  const amplitude = 0.8 // percent units
   const points: [number, number][] = [[startX, startY]]
 
   for (let i = 1; i <= segments; i++) {
@@ -45,42 +49,39 @@ function generateWigglyPath(
     const baseX = startX + (x2 - startX) * t
     const baseY = startY + (y2 - startY) * t
     const sineOffset = Math.sin((t * Math.PI * 2) + phase) * amplitude
-    if (i < segments) {
-      points.push([baseX + px * sineOffset, baseY + py * sineOffset])
-    } else {
-      points.push([x2, y2])
-    }
+    points.push(i < segments ? [baseX + px * sineOffset, baseY + py * sineOffset] : [x2, y2])
   }
 
-  let path = `M ${points[0][0]} ${points[0][1]}`
-  for (let i = 1; i < points.length; i++) {
-    path += ` L ${points[i][0]} ${points[i][1]}`
-  }
-  return path
+  return points.reduce(
+    (path, point, index) => `${path}${index === 0 ? 'M' : ' L'} ${point[0]} ${point[1]}`,
+    '',
+  )
 }
 
-export function WigglyLine({ x1Pct, y1Pct, x2Pct, y2Pct, color, iconRadiusPct = 4 }: WigglyLineProps) {
+export function WigglyLine(props: WigglyLineProps) {
+  const pixelCoordinates = 'x1' in props
+  const x1 = pixelCoordinates ? props.x1 : props.x1Pct
+  const y1 = pixelCoordinates ? props.y1 : props.y1Pct
+  const x2 = pixelCoordinates ? props.x2 : props.x2Pct
+  const y2 = pixelCoordinates ? props.y2 : props.y2Pct
+  const iconRadius = pixelCoordinates ? (props.iconRadius ?? 24) : (props.iconRadiusPct ?? 4)
+  const amplitude = pixelCoordinates ? 4 : 0.8
+
   const pathVariants = useMemo(() => {
     const frames = 60
-    const paths: string[] = []
-    for (let i = 0; i <= frames; i++) {
-      const phase = (i / frames) * Math.PI * 2
-      paths.push(generateWigglyPath(x1Pct, y1Pct, x2Pct, y2Pct, iconRadiusPct, phase))
-    }
-    return paths
-  }, [x1Pct, y1Pct, x2Pct, y2Pct, iconRadiusPct])
+    return Array.from({ length: frames + 1 }, (_, index) =>
+      generateWigglyPath(x1, y1, x2, y2, iconRadius, amplitude, (index / frames) * Math.PI * 2),
+    )
+  }, [x1, y1, x2, y2, iconRadius, amplitude])
 
   return (
     <motion.path
       d={pathVariants[0]}
-      stroke={color}
-      strokeWidth={0.5}
+      stroke={props.color}
+      strokeWidth={pixelCoordinates ? 1.5 : 0.5}
       fill="none"
       initial={{ opacity: 0 }}
-      animate={{
-        opacity: 1,
-        d: pathVariants,
-      }}
+      animate={{ opacity: 1, d: pathVariants }}
       transition={{
         opacity: { duration: 0.3 },
         d: { duration: 2, repeat: Infinity, ease: 'linear' },

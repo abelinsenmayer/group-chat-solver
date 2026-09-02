@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 import logging
 from pathlib import Path
+from typing import Annotated
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import ToolCallLimitMiddleware
 from langchain_core.tools import tool
 from langsmith import traceable
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.mapping_utils import find_pois_in_polygon
 
@@ -92,6 +93,7 @@ def _create_search_tool(
                 f"address={props.get('address', props.get('place_formatted', 'unknown'))}, "
                 f"coordinates=({coords.get('longitude')}, {coords.get('latitude')})"
             )
+        logger.debug("Returning this to the planner LLM: %s", "\n".join(lines))
         return "\n".join(lines)
 
     return search_restaurants
@@ -101,7 +103,7 @@ class SelectedSuggestion(BaseModel):
     id: str
     name: str
     address: str | None = None
-    coordinates: tuple[float, float]
+    coordinates: Annotated[list[float], Field(min_length=2, max_length=2)]
 
 
 class SuggestionSelection(BaseModel):

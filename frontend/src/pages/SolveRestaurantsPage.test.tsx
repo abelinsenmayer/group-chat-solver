@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import * as React from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
@@ -52,6 +52,57 @@ function mockEventSubscription() {
   })
   return (event: SolveRestaurantsEvent) => act(() => emitEvent(event))
 }
+
+async function renderStartedPage(people: Person[] = [elena, marcus]) {
+  vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
+  const emit = mockEventSubscription()
+  const user = userEvent.setup()
+  render(<SolveRestaurantsPage people={people} overlap={overlap} onBack={vi.fn()} />)
+  await user.click(screen.getByRole('button', { name: /start/i }))
+  await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
+  return emit
+}
+
+test('uses the responsive solver page instead of the legacy circular board', async () => {
+  vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
+  mockEventSubscription()
+  const { user } = renderWithUser(<SolveRestaurantsPage people={[elena]} overlap={overlap} onBack={vi.fn()} />)
+  await user.click(screen.getByRole('button', { name: /start/i }))
+  expect(await screen.findByTestId('responsive-solver-page')).toBeInTheDocument()
+  expect(screen.queryByTestId('debate-zone-ring')).not.toBeInTheDocument()
+})
+
+test('stacks system agents above a separately scrollable two-column activity board', async () => {
+  await renderStartedPage()
+
+  const page = await screen.findByTestId('responsive-solver-page')
+  const header = screen.getByTestId('solver-agent-header')
+  const divider = screen.getByTestId('solver-divider')
+  const board = screen.getByRole('region', { name: 'Restaurant evaluation activity' })
+  expect(page.compareDocumentPosition(header) & Node.DOCUMENT_POSITION_CONTAINED_BY).toBeTruthy()
+  expect(header.compareDocumentPosition(divider) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(divider.compareDocumentPosition(board) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(board).toHaveClass('overflow-y-auto')
+  expect(screen.getByTestId('people-column')).toBeInTheDocument()
+  expect(screen.getByTestId('suggestions-column')).toBeInTheDocument()
+})
+
+test('places the evaluation overlay inside the scrolling content layer', async () => {
+  await renderStartedPage()
+
+  const board = screen.getByRole('region', { name: 'Restaurant evaluation activity' })
+  const overlay = screen.getByTestId('evaluation-connections')
+  const peopleColumn = screen.getByTestId('people-column')
+  expect(overlay.parentElement?.parentElement).toBe(board)
+  expect(overlay.parentElement).toContainElement(peopleColumn)
+})
+
+test('places rejected suggestions below the activity board', async () => {
+  await renderStartedPage()
+  const board = await screen.findByRole('region', { name: 'Restaurant evaluation activity' })
+  const trash = screen.getByTestId('solver-trash')
+  expect(board.compareDocumentPosition(trash) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})
 
 test('shows a loading message while the solver is starting', async () => {
   vi.mocked(fetchSolveRestaurants).mockReturnValue(new Promise(() => {}))
@@ -128,7 +179,9 @@ test('renders a suggestion card once the planner proposes suggestions', async ()
     suggestions: [{ id: 'r1', name: 'Veggie Spot', address: '1 Main St', coordinates: [-73.98, 40.75] }],
   })
 
-  expect(screen.getByText('Veggie Spot')).toBeInTheDocument()
+  const card = within(screen.getByTestId('suggestions-column')).getByText('Veggie Spot').closest('[data-phase]')
+  expect(card).toHaveAttribute('data-suggestion-id', 'r1')
+  expect(card).toHaveAttribute('data-phase', 'active')
 })
 
 test('shows a check mark when a judge approves a suggestion', async () => {
@@ -208,9 +261,11 @@ test('marks a card as trashed once its round completes without unanimous approva
     vi.advanceTimersByTime(1600)
   })
 
-  expect(screen.getByText('Veggie Spot').closest('[data-phase]')).toHaveAttribute('data-phase', 'trashed')
+  expect(within(screen.getByTestId('suggestions-column')).queryByText('Veggie Spot')).not.toBeInTheDocument()
 
   vi.useRealTimers()
+  fireEvent.mouseEnter(screen.getByLabelText('Rejected suggestions').closest('div')!)
+  expect(screen.getByTestId('trash-popover')).toHaveTextContent('Veggie Spot')
 })
 
 test('shows a consensus banner when the final result is reached', async () => {
@@ -302,34 +357,13 @@ test('renders person icons at 48px size', async () => {
   mockEventSubscription()
   const user = userEvent.setup()
 
-  const { container } = render(
-    <SolveRestaurantsPage people={[elena]} overlap={overlap} onBack={vi.fn()} />,
-  )
-
-  await user.click(screen.getByRole('button', { name: /start/i }))
-  await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
-
-  // Person icon SVG should be 48px
-  const personIcons = container.querySelectorAll('svg')
-  const elenaIcon = Array.from(personIcons).find(
-    (svg) => svg.getAttribute('width') === '48' && svg.closest('[class*="absolute"]'),
-  )
-  expect(elenaIcon).toBeTruthy()
-})
-
-test('trash icon is positioned at the right edge of the simulation area', async () => {
-  vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
-  mockEventSubscription()
-  const user = userEvent.setup()
-
   render(<SolveRestaurantsPage people={[elena]} overlap={overlap} onBack={vi.fn()} />)
+
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
-  const trashIcon = screen.getByLabelText('Rejected suggestions')
-  const trashContainer = trashIcon.closest('div')!
-  expect(trashContainer).toHaveClass('right-0')
-  expect(trashContainer).toHaveClass('top-1/2')
+  const personIcon = screen.getByTestId('people-column').querySelector('svg[width="48"]')
+  expect(personIcon).toBeTruthy()
 })
 
 test('shows a thought bubble for the planner while it is thinking', async () => {
@@ -505,6 +539,25 @@ test('cards enter pending-trash phase before being fully trashed', async () => {
   vi.useRealTimers()
 })
 
+test('preserves the suggestion card DOM node when it enters pending-trash', async () => {
+  const emit = await renderStartedPage([elena])
+
+  emit({
+    type: 'planner_suggestions',
+    round: 1,
+    suggestions: [{ id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] }],
+  })
+  const activeCard = screen.getByText('Veggie Spot').closest('[data-phase]')
+  expect(activeCard).toHaveAttribute('data-phase', 'active')
+
+  vi.useFakeTimers()
+  emit({ type: 'round_complete', round: 1, accepted_ids: [] })
+
+  const pendingTrashCard = screen.getByText('Veggie Spot').closest('[data-phase]')
+  expect(pendingTrashCard).toHaveAttribute('data-phase', 'pending-trash')
+  expect(pendingTrashCard).toBe(activeCard)
+})
+
 test('cards transition from pending-trash to trashed after 1.5 seconds', async () => {
   vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
   const emit = mockEventSubscription()
@@ -529,9 +582,11 @@ test('cards transition from pending-trash to trashed after 1.5 seconds', async (
     vi.advanceTimersByTime(1600)
   })
 
-  expect(screen.getByText('Veggie Spot').closest('[data-phase]')).toHaveAttribute('data-phase', 'trashed')
+  expect(within(screen.getByTestId('suggestions-column')).queryByText('Veggie Spot')).not.toBeInTheDocument()
 
   vi.useRealTimers()
+  fireEvent.mouseEnter(screen.getByLabelText('Rejected suggestions').closest('div')!)
+  expect(screen.getByTestId('trash-popover')).toHaveTextContent('Veggie Spot')
 })
 
 test('shows trashed cards in a popover when hovering the trash icon', async () => {
@@ -564,12 +619,11 @@ test('shows trashed cards in a popover when hovering the trash icon', async () =
     vi.advanceTimersByTime(1600)
   })
 
+  vi.useRealTimers()
   const trashIcon = screen.getByLabelText('Rejected suggestions')
   fireEvent.mouseEnter(trashIcon.closest('div')!)
 
-  expect(screen.getAllByText('Veggie Spot').length).toBeGreaterThanOrEqual(2)
-
-  vi.useRealTimers()
+  expect(screen.getByTestId('trash-popover')).toHaveTextContent('Veggie Spot')
 })
 
 test('shows empty state in trash popover when no cards are trashed', async () => {
@@ -585,21 +639,6 @@ test('shows empty state in trash popover when no cards are trashed', async () =>
   fireEvent.mouseEnter(trashIcon.closest('div')!)
 
   expect(screen.getByText(/No rejected suggestions yet/)).toBeInTheDocument()
-})
-
-test('renders an animated SVG ring for the debate zone', async () => {
-  vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
-  mockEventSubscription()
-  const user = userEvent.setup()
-
-  const { container } = render(<SolveRestaurantsPage people={[elena]} overlap={overlap} onBack={vi.fn()} />)
-  await user.click(screen.getByRole('button', { name: /start/i }))
-  await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
-
-  const ring = container.querySelector('[data-testid="debate-zone-ring"]')
-  expect(ring).toBeInTheDocument()
-  expect(ring).toHaveAttribute('stroke-dasharray')
-  expect(ring).toHaveAttribute('stroke-dashoffset')
 })
 
 test('thought bubbles use larger text', async () => {
@@ -634,26 +673,6 @@ test('thought bubbles show three animated dots', async () => {
   expect(dots.length).toBe(3)
 })
 
-test('wiggly connecting lines are thinner', async () => {
-  vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
-  const emit = mockEventSubscription()
-  const user = userEvent.setup()
-
-  const { container } = render(<SolveRestaurantsPage people={[elena, marcus]} overlap={overlap} onBack={vi.fn()} />)
-  await user.click(screen.getByRole('button', { name: /start/i }))
-  await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
-
-  emit({
-    type: 'planner_suggestions',
-    round: 1,
-    suggestions: [{ id: 'r1', name: 'Veggie Spot', address: '1 Main St', coordinates: [-73.98, 40.75] }],
-  })
-  emit({ type: 'judge_evaluating', person: 'Elena', suggestion_id: 'r1' })
-
-  const line = container.querySelector('svg[preserveAspectRatio="none"] path')
-  expect(line).toHaveAttribute('stroke-width', '0.5')
-})
-
 test('planner icon matches person icon size', async () => {
   vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
   mockEventSubscription()
@@ -668,21 +687,6 @@ test('planner icon matches person icon size', async () => {
   )
   expect(plannerIcon).toBeTruthy()
   expect(plannerIcon).toHaveAttribute('width', '48')
-})
-
-test('person icon wrappers sit above the connecting lines', async () => {
-  vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
-  mockEventSubscription()
-  const user = userEvent.setup()
-
-  const { container } = render(<SolveRestaurantsPage people={[elena]} overlap={overlap} onBack={vi.fn()} />)
-  await user.click(screen.getByRole('button', { name: /start/i }))
-  await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
-
-  const personWrapper = container.querySelector('[data-person-wrapper]')
-  expect(personWrapper).toHaveClass('z-20')
-  const linesSvg = container.querySelector('svg[preserveAspectRatio="none"]')
-  expect(linesSvg).toHaveClass('z-0')
 })
 
 test('retains trashed cards when the next round starts', async () => {
@@ -720,47 +724,13 @@ test('retains trashed cards when the next round starts', async () => {
     suggestions: [{ id: 'r2', name: 'Burger Barn', address: null, coordinates: [-73.99, 40.74] }],
   })
 
-  expect(screen.getByText('Veggie Spot').closest('[data-phase]')).toHaveAttribute('data-phase', 'trashed')
-  expect(screen.getByText('Burger Barn').closest('[data-phase]')).toHaveAttribute('data-phase', 'active')
+  const suggestions = within(screen.getByTestId('suggestions-column'))
+  expect(suggestions.queryByText('Veggie Spot')).not.toBeInTheDocument()
+  expect(suggestions.getByText('Burger Barn').closest('[data-phase]')).toHaveAttribute('data-phase', 'active')
 
   vi.useRealTimers()
-})
-
-test('trash popover and its trigger sit above trashed suggestion cards', async () => {
-  vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
-  const emit = mockEventSubscription()
-  const user = userEvent.setup()
-
-  render(<SolveRestaurantsPage people={[elena]} overlap={overlap} onBack={vi.fn()} />)
-  await user.click(screen.getByRole('button', { name: /start/i }))
-  await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
-
-  emit({
-    type: 'planner_suggestions',
-    round: 1,
-    suggestions: [{ id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] }],
-  })
-  emit({
-    type: 'judge_verdict',
-    person: 'Elena',
-    suggestion_id: 'r1',
-    verdict: 'rejected',
-    short_reason: 'Too far',
-    feedback: null,
-  })
-
-  vi.useFakeTimers()
-  emit({ type: 'round_complete', round: 1, accepted_ids: [] })
-  act(() => {
-    vi.advanceTimersByTime(1600)
-  })
-  vi.useRealTimers()
-
-  const trashContainer = screen.getByLabelText('Rejected suggestions').closest('div')!
-  expect(trashContainer).toHaveClass('z-30')
-
-  const trashedCard = screen.getByText('Veggie Spot').closest('[data-phase="trashed"]')!
-  expect(trashedCard).toHaveClass('z-0')
+  fireEvent.mouseEnter(screen.getByLabelText('Rejected suggestions').closest('div')!)
+  expect(screen.getByTestId('trash-popover')).toHaveTextContent('Veggie Spot')
 })
 
 test('trash popover has an opaque background and floats above other elements', async () => {
@@ -860,6 +830,38 @@ test('shows a question-gathering thought bubble for a judge', async () => {
   expect(screen.getByText(/Deciding what to research about Veggie Spot/)).toBeInTheDocument()
 })
 
+test('does not draw researcher-to-suggestion connections', async () => {
+  const emit = await renderStartedPage([elena])
+  emit({
+    type: 'planner_suggestions',
+    round: 1,
+    suggestions: [{ id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] }],
+  })
+  emit({ type: 'researcher_started', suggestion_id: 'r1' })
+  expect(screen.getByTestId('evaluation-connections').querySelectorAll('path')).toHaveLength(0)
+})
+
+test('draws a judge connection to the suggestion being evaluated', async () => {
+  const rectangle = (left: number, top: number, width: number, height: number) => ({
+    left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON: () => ({}),
+  }) as DOMRect
+  const rectSpy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+    if (this.getAttribute('aria-label') === 'Restaurant evaluation activity') return rectangle(10, 20, 300, 400)
+    if (this.hasAttribute('data-person-name')) return rectangle(50, 110, 20, 20)
+    if (this.hasAttribute('data-suggestion-id')) return rectangle(230, 170, 20, 20)
+    return rectangle(0, 0, 0, 0)
+  })
+  const emit = await renderStartedPage([elena])
+  emit({
+    type: 'planner_suggestions',
+    round: 1,
+    suggestions: [{ id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] }],
+  })
+  emit({ type: 'judge_evaluating', person: 'Elena', suggestion_id: 'r1' })
+  await waitFor(() => expect(screen.getByTestId('evaluation-connections').querySelectorAll('path')).toHaveLength(1))
+  rectSpy.mockRestore()
+})
+
 test('shows a researcher thought bubble while researching', async () => {
   vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
   const emit = mockEventSubscription()
@@ -919,8 +921,6 @@ test('agent thought bubbles are anchored to their own icon wrapper', async () =>
   const researcherWrapper = container.querySelector('[data-agent-wrapper="researcher"]')
   const bubble = screen.getByText(/Researching Veggie Spot/).closest('div')
   expect(researcherWrapper).toContainElement(bubble)
-  // The bubble is absolutely positioned, so its wrapper must establish the containing block.
-  expect(researcherWrapper).toHaveClass('absolute')
 })
 
 test('planner thought bubbles hang below their icon so they stay inside the board', async () => {
@@ -959,32 +959,6 @@ test('judge thought bubbles still sit above their icon', async () => {
     'data-placement',
     'above',
   )
-})
-
-test('researcher connector line starts at the researcher icon position', async () => {
-  vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
-  const emit = mockEventSubscription()
-  const user = userEvent.setup()
-
-  const { container } = render(<SolveRestaurantsPage people={[elena]} overlap={overlap} onBack={vi.fn()} />)
-  await user.click(screen.getByRole('button', { name: /start/i }))
-  await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
-
-  emit({
-    type: 'planner_suggestions',
-    round: 1,
-    suggestions: [{ id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] }],
-  })
-  emit({ type: 'researcher_started', suggestion_id: 'r1' })
-
-  const wrapper = container.querySelector<HTMLElement>('[data-agent-wrapper="researcher"]')!
-  const expectedX = Number.parseFloat(wrapper.style.left)
-  const expectedY = Number.parseFloat(wrapper.style.top)
-
-  const path = container.querySelector('svg[preserveAspectRatio="none"] path')!
-  const [startX, startY] = path.getAttribute('d')!.slice(2).split(' ').map(Number)
-  // Line starts on the icon's edge (iconRadiusPct = 6) along the direction of the card.
-  expect(Math.hypot(startX - expectedX, startY - expectedY)).toBeCloseTo(6, 5)
 })
 
 test('renders the researcher icon with the correct color', async () => {

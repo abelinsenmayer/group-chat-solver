@@ -22,6 +22,16 @@ def _run__run_planner(state):
     return asyncio.run(_run_planner(state))
 
 
+def test_suggestion_selection_uses_gemini_compatible_coordinate_schema():
+    schema = SuggestionSelection.model_json_schema()
+    coordinates = schema["$defs"]["SelectedSuggestion"]["properties"]["coordinates"]
+
+    assert coordinates["items"] == {"type": "number"}
+    assert coordinates["minItems"] == 2
+    assert coordinates["maxItems"] == 2
+    assert "prefixItems" not in coordinates
+
+
 def test_search_restaurants_tool_formats_results():
     raw_features = [
         {

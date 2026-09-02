@@ -1,6 +1,7 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import appSource from './App.tsx?raw'
 import App from './App'
 import { fetchSolveRestaurants, subscribeSolveRestaurantsEvents } from './lib/people-api'
 
@@ -217,4 +218,9 @@ test('resets the restaurant solver to its initial state when navigating back the
   await screen.findByRole('heading', { name: /let's find a restaurant!/i })
 
   expect(await screen.findByRole('button', { name: /start simulation/i })).toBeInTheDocument()
+})
+
+test('wires the active SolveRestaurantsPage and does not import the legacy page', () => {
+  expect(appSource).toMatch(/from ['"]\.\/pages\/SolveRestaurantsPage['"]/)
+  expect(appSource).not.toMatch(/from ['"]\.\/pages\/SolveRestaurantsPageLegacy['"]/)
 })
