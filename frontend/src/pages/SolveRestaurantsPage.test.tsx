@@ -17,6 +17,7 @@ import {
   type Person,
   type SolveRestaurantsEvent,
 } from '../lib/people-api'
+import { MIN_STEP_DURATION_MS } from './solve-restaurants-event-pacer'
 import SolveRestaurantsPage from './SolveRestaurantsPage'
 
 vi.mock('../lib/people-api', async (importOriginal) => ({
@@ -193,6 +194,7 @@ test('shows a check mark when a judge approves a suggestion', async () => {
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
@@ -208,7 +210,13 @@ test('shows a check mark when a judge approves a suggestion', async () => {
     feedback: null,
   })
 
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
   expect(screen.getByText('✓')).toBeInTheDocument()
+
+  vi.useRealTimers()
 })
 
 test('shows a rejection tag when a judge rejects a suggestion', async () => {
@@ -220,6 +228,7 @@ test('shows a rejection tag when a judge rejects a suggestion', async () => {
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
@@ -234,7 +243,13 @@ test('shows a rejection tag when a judge rejects a suggestion', async () => {
     feedback: 'Way over budget.',
   })
 
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
   expect(screen.getByText('Too expensive!')).toBeInTheDocument()
+
+  vi.useRealTimers()
 })
 
 test('marks a card as trashed once its round completes without unanimous approval', async () => {
@@ -255,10 +270,14 @@ test('marks a card as trashed once its round completes without unanimous approva
   vi.useFakeTimers()
   emit({ type: 'round_complete', round: 1, accepted_ids: [] })
 
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
   expect(screen.getByText('Veggie Spot').closest('[data-phase]')).toHaveAttribute('data-phase', 'pending-trash')
 
   act(() => {
-    vi.advanceTimersByTime(1600)
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS + 100)
   })
 
   expect(within(screen.getByTestId('suggestions-column')).queryByText('Veggie Spot')).not.toBeInTheDocument()
@@ -277,18 +296,26 @@ test('shows a consensus banner when the final result is reached', async () => {
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
     suggestions: [{ id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] }],
   })
+  emit({ type: 'round_complete', round: 1, accepted_ids: ['r1'] })
   emit({
     type: 'final_result',
     status: 'consensus',
     suggestions: [{ id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] }],
   })
 
-  expect(await screen.findByText('Everyone agrees! 🎉')).toBeInTheDocument()
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS * 2)
+  })
+
+  expect(screen.getByText('Everyone agrees! 🎉')).toBeInTheDocument()
+
+  vi.useRealTimers()
 })
 
 test('shows a no-compromise banner when the final result has no consensus', async () => {
@@ -300,9 +327,17 @@ test('shows a no-compromise banner when the final result has no consensus', asyn
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
+  emit({ type: 'round_complete', round: 1, accepted_ids: [] })
   emit({ type: 'final_result', status: 'no_consensus', suggestions: [] })
 
-  expect(await screen.findByText('No compromise could be reached.')).toBeInTheDocument()
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS * 2)
+  })
+
+  expect(screen.getByText('No compromise could be reached.')).toBeInTheDocument()
+
+  vi.useRealTimers()
 })
 
 test('shows a friendly message and retry button when no restaurants are found', async () => {
@@ -389,6 +424,7 @@ test('hides the planner thought bubble once suggestions arrive', async () => {
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({ type: 'planner_started', round: 1 })
   emit({
     type: 'planner_suggestions',
@@ -396,7 +432,13 @@ test('hides the planner thought bubble once suggestions arrive', async () => {
     suggestions: [{ id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] }],
   })
 
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
   expect(screen.queryByText(/Brainstorming restaurant ideas/)).not.toBeInTheDocument()
+
+  vi.useRealTimers()
 })
 
 test('shows a thought bubble for a judge while evaluating a suggestion', async () => {
@@ -408,6 +450,7 @@ test('shows a thought bubble for a judge while evaluating a suggestion', async (
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
@@ -415,7 +458,13 @@ test('shows a thought bubble for a judge while evaluating a suggestion', async (
   })
   emit({ type: 'judge_evaluating', person: 'Elena', suggestion_id: 'r1' })
 
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
   expect(screen.getByText(/Evaluating Veggie Spot/)).toBeInTheDocument()
+
+  vi.useRealTimers()
 })
 
 test('hides the judge thought bubble after verdict is received', async () => {
@@ -427,6 +476,7 @@ test('hides the judge thought bubble after verdict is received', async () => {
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
@@ -442,7 +492,13 @@ test('hides the judge thought bubble after verdict is received', async () => {
     feedback: null,
   })
 
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
   expect(screen.queryByText(/Evaluating Veggie Spot/)).not.toBeInTheDocument()
+
+  vi.useRealTimers()
 })
 
 test('shows a Start button on initial render and does not auto-start the simulation', () => {
@@ -478,9 +534,17 @@ test('shows a Retry button after the simulation completes', async () => {
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
+  emit({ type: 'round_complete', round: 1, accepted_ids: [] })
   emit({ type: 'final_result', status: 'consensus', suggestions: [] })
 
-  expect(await screen.findByRole('button', { name: /retry/i })).toBeInTheDocument()
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS * 2)
+  })
+
+  expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
+
+  vi.useRealTimers()
 })
 
 test('Retry resets to the idle state showing Start button again', async () => {
@@ -492,9 +556,17 @@ test('Retry resets to the idle state showing Start button again', async () => {
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
+  emit({ type: 'round_complete', round: 1, accepted_ids: [] })
   emit({ type: 'final_result', status: 'consensus', suggestions: [] })
 
-  const retryButton = await screen.findByRole('button', { name: /retry/i })
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS * 2)
+  })
+
+  vi.useRealTimers()
+
+  const retryButton = screen.getByRole('button', { name: /retry/i })
   await user.click(retryButton)
 
   expect(screen.getByRole('button', { name: /start/i })).toBeInTheDocument()
@@ -534,6 +606,10 @@ test('cards enter pending-trash phase before being fully trashed', async () => {
   vi.useFakeTimers()
   emit({ type: 'round_complete', round: 1, accepted_ids: [] })
 
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
   expect(screen.getByText('Veggie Spot').closest('[data-phase]')).toHaveAttribute('data-phase', 'pending-trash')
 
   vi.useRealTimers()
@@ -553,12 +629,18 @@ test('preserves the suggestion card DOM node when it enters pending-trash', asyn
   vi.useFakeTimers()
   emit({ type: 'round_complete', round: 1, accepted_ids: [] })
 
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
   const pendingTrashCard = screen.getByText('Veggie Spot').closest('[data-phase]')
   expect(pendingTrashCard).toHaveAttribute('data-phase', 'pending-trash')
   expect(pendingTrashCard).toBe(activeCard)
+
+  vi.useRealTimers()
 })
 
-test('cards transition from pending-trash to trashed after 1.5 seconds', async () => {
+test('cards transition from pending-trash to trashed after the minimum step duration', async () => {
   vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
   const emit = mockEventSubscription()
   const user = userEvent.setup()
@@ -567,19 +649,22 @@ test('cards transition from pending-trash to trashed after 1.5 seconds', async (
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
     suggestions: [{ id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] }],
   })
-
-  vi.useFakeTimers()
   emit({ type: 'round_complete', round: 1, accepted_ids: [] })
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
 
   expect(screen.getByText('Veggie Spot').closest('[data-phase]')).toHaveAttribute('data-phase', 'pending-trash')
 
   act(() => {
-    vi.advanceTimersByTime(1600)
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS + 100)
   })
 
   expect(within(screen.getByTestId('suggestions-column')).queryByText('Veggie Spot')).not.toBeInTheDocument()
@@ -598,6 +683,7 @@ test('shows trashed cards in a popover when hovering the trash icon', async () =
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
@@ -612,11 +698,18 @@ test('shows trashed cards in a popover when hovering the trash icon', async () =
     feedback: null,
   })
 
-  vi.useFakeTimers()
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
   emit({ type: 'round_complete', round: 1, accepted_ids: [] })
 
   act(() => {
-    vi.advanceTimersByTime(1600)
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS + 100)
   })
 
   vi.useRealTimers()
@@ -698,6 +791,7 @@ test('retains trashed cards when the next round starts', async () => {
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
@@ -712,16 +806,31 @@ test('retains trashed cards when the next round starts', async () => {
     feedback: null,
   })
 
-  vi.useFakeTimers()
-  emit({ type: 'round_complete', round: 1, accepted_ids: [] })
   act(() => {
-    vi.advanceTimersByTime(1600)
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
   })
 
+  emit({ type: 'round_complete', round: 1, accepted_ids: [] })
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS + 100)
+  })
+
+  emit({ type: 'planner_started', round: 2 })
+  act(() => {
+    vi.advanceTimersByTime(0)
+  })
   emit({
     type: 'planner_suggestions',
     round: 2,
     suggestions: [{ id: 'r2', name: 'Burger Barn', address: null, coordinates: [-73.99, 40.74] }],
+  })
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
   })
 
   const suggestions = within(screen.getByTestId('suggestions-column'))
@@ -741,6 +850,7 @@ test('trash popover has an opaque background and floats above other elements', a
   fireEvent.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
@@ -755,10 +865,18 @@ test('trash popover has an opaque background and floats above other elements', a
     feedback: null,
   })
 
-  vi.useFakeTimers()
-  emit({ type: 'round_complete', round: 1, accepted_ids: [] })
   act(() => {
-    vi.advanceTimersByTime(1600)
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
+  emit({ type: 'round_complete', round: 1, accepted_ids: [] })
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS + 100)
   })
   vi.useRealTimers()
 
@@ -789,9 +907,17 @@ test('Retry clears the loaded status so a new simulation can be started', async 
 
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalledWith('run-1', expect.any(Function)))
 
+  vi.useFakeTimers()
+  emit({ type: 'round_complete', round: 1, accepted_ids: [] })
   emit({ type: 'final_result', status: 'consensus', suggestions: [] })
 
-  const retryButton = await screen.findByRole('button', { name: /retry/i })
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS * 2)
+  })
+
+  vi.useRealTimers()
+
+  const retryButton = screen.getByRole('button', { name: /retry/i })
   await user.click(retryButton)
 
   expect(onStatusLoaded).toHaveBeenCalledWith(null)
@@ -820,6 +946,7 @@ test('shows a question-gathering thought bubble for a judge', async () => {
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
@@ -827,18 +954,33 @@ test('shows a question-gathering thought bubble for a judge', async () => {
   })
   emit({ type: 'judge_questioning', person: 'Elena', suggestion_id: 'r1' })
 
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
   expect(screen.getByText(/Deciding what to research about Veggie Spot/)).toBeInTheDocument()
+
+  vi.useRealTimers()
 })
 
 test('does not draw researcher-to-suggestion connections', async () => {
   const emit = await renderStartedPage([elena])
+
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
     suggestions: [{ id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] }],
   })
   emit({ type: 'researcher_started', suggestion_id: 'r1' })
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
   expect(screen.getByTestId('evaluation-connections').querySelectorAll('path')).toHaveLength(0)
+
+  vi.useRealTimers()
 })
 
 test('draws a judge connection to the suggestion being evaluated', async () => {
@@ -852,14 +994,25 @@ test('draws a judge connection to the suggestion being evaluated', async () => {
     return rectangle(0, 0, 0, 0)
   })
   const emit = await renderStartedPage([elena])
+
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
     suggestions: [{ id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] }],
   })
   emit({ type: 'judge_evaluating', person: 'Elena', suggestion_id: 'r1' })
-  await waitFor(() => expect(screen.getByTestId('evaluation-connections').querySelectorAll('path')).toHaveLength(1))
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+  act(() => {
+    vi.advanceTimersByTime(16)
+  })
+
+  expect(screen.getByTestId('evaluation-connections').querySelectorAll('path')).toHaveLength(1)
   rectSpy.mockRestore()
+  vi.useRealTimers()
 })
 
 test('shows a researcher thought bubble while researching', async () => {
@@ -871,6 +1024,7 @@ test('shows a researcher thought bubble while researching', async () => {
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
@@ -878,7 +1032,13 @@ test('shows a researcher thought bubble while researching', async () => {
   })
   emit({ type: 'researcher_started', suggestion_id: 'r1' })
 
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
   expect(screen.getByText(/Researching Veggie Spot/)).toBeInTheDocument()
+
+  vi.useRealTimers()
 })
 
 test('hides the researcher thought bubble after research is done', async () => {
@@ -890,6 +1050,7 @@ test('hides the researcher thought bubble after research is done', async () => {
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
@@ -898,7 +1059,13 @@ test('hides the researcher thought bubble after research is done', async () => {
   emit({ type: 'researcher_started', suggestion_id: 'r1' })
   emit({ type: 'researcher_done', suggestion_id: 'r1' })
 
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
   expect(screen.queryByText(/Researching Veggie Spot/)).not.toBeInTheDocument()
+
+  vi.useRealTimers()
 })
 
 test('agent thought bubbles are anchored to their own icon wrapper', async () => {
@@ -910,6 +1077,7 @@ test('agent thought bubbles are anchored to their own icon wrapper', async () =>
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({ type: 'planner_started', round: 1 })
   emit({
     type: 'planner_suggestions',
@@ -918,9 +1086,15 @@ test('agent thought bubbles are anchored to their own icon wrapper', async () =>
   })
   emit({ type: 'researcher_started', suggestion_id: 'r1' })
 
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS * 2)
+  })
+
   const researcherWrapper = container.querySelector('[data-agent-wrapper="researcher"]')
   const bubble = screen.getByText(/Researching Veggie Spot/).closest('div')
   expect(researcherWrapper).toContainElement(bubble)
+
+  vi.useRealTimers()
 })
 
 test('planner thought bubbles hang below their icon so they stay inside the board', async () => {
@@ -948,6 +1122,7 @@ test('judge thought bubbles still sit above their icon', async () => {
   await user.click(screen.getByRole('button', { name: /start/i }))
   await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
 
+  vi.useFakeTimers()
   emit({
     type: 'planner_suggestions',
     round: 1,
@@ -955,10 +1130,16 @@ test('judge thought bubbles still sit above their icon', async () => {
   })
   emit({ type: 'judge_evaluating', person: 'Elena', suggestion_id: 'r1' })
 
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
   expect(screen.getByText(/Evaluating Veggie Spot/).closest('[data-placement]')).toHaveAttribute(
     'data-placement',
     'above',
   )
+
+  vi.useRealTimers()
 })
 
 test('renders the researcher icon with the correct color', async () => {
@@ -980,4 +1161,240 @@ test('renders the researcher icon with the correct color', async () => {
   const researcherLabel = screen.getByText('Researcher')
   expect(researcherLabel).toBeInTheDocument()
   expect(researcherLabel).toHaveStyle({ color: 'var(--color-researcher)' })
+})
+
+test('paces a fast backend so each visual phase lasts at least the minimum duration', async () => {
+  const emit = await renderStartedPage()
+
+  vi.useFakeTimers()
+
+  emit({ type: 'planner_started', round: 1 })
+  emit({
+    type: 'planner_suggestions',
+    round: 1,
+    suggestions: [{ id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] }],
+  })
+
+  expect(screen.getByText(/Brainstorming restaurant ideas/)).toBeInTheDocument()
+  expect(screen.queryByText('Veggie Spot')).not.toBeInTheDocument()
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
+  expect(screen.getByText('Veggie Spot')).toBeInTheDocument()
+
+  vi.useRealTimers()
+})
+
+test('shows late verdict feedback before the card moves to pending-trash', async () => {
+  const emit = await renderStartedPage()
+
+  vi.useFakeTimers()
+
+  emit({
+    type: 'planner_suggestions',
+    round: 1,
+    suggestions: [{ id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] }],
+  })
+  emit({ type: 'judge_evaluating', person: 'Elena', suggestion_id: 'r1' })
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+  emit({
+    type: 'judge_verdict',
+    person: 'Elena',
+    suggestion_id: 'r1',
+    verdict: 'rejected',
+    short_reason: 'Too spicy',
+    feedback: null,
+  })
+  emit({ type: 'round_complete', round: 1, accepted_ids: [] })
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS - 100)
+  })
+
+  emit({
+    type: 'judge_verdict',
+    person: 'Marcus',
+    suggestion_id: 'r1',
+    verdict: 'rejected',
+    short_reason: 'Too far',
+    feedback: null,
+  })
+
+  expect(screen.getByText('Too far')).toBeInTheDocument()
+  expect(screen.getByText('Veggie Spot').closest('[data-phase]')).toHaveAttribute('data-phase', 'active')
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS - 100)
+  })
+  expect(screen.getByText('Veggie Spot').closest('[data-phase]')).toHaveAttribute('data-phase', 'active')
+
+  act(() => {
+    vi.advanceTimersByTime(101)
+  })
+  expect(screen.getByText('Veggie Spot').closest('[data-phase]')).toHaveAttribute('data-phase', 'pending-trash')
+
+  vi.useRealTimers()
+})
+
+test('disposes stale run callbacks so queued events cannot update the reset page', async () => {
+  vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
+  let capturedOnEvent: ((event: SolveRestaurantsEvent) => void) | null = null
+  vi.mocked(subscribeSolveRestaurantsEvents).mockImplementation((_runId, onEvent) => {
+    capturedOnEvent = onEvent
+    return () => {}
+  })
+  const user = userEvent.setup()
+  const suggestion = { id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] as [number, number] }
+
+  render(<SolveRestaurantsPage people={[elena]} overlap={overlap} onBack={vi.fn()} />)
+  await user.click(screen.getByRole('button', { name: /start/i }))
+  await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
+  expect(capturedOnEvent).not.toBeNull()
+
+  vi.useFakeTimers()
+
+  // Queue a delayed event that would land after the run is disposed.
+  setTimeout(() => {
+    capturedOnEvent!({ type: 'planner_suggestions', round: 1, suggestions: [suggestion] })
+  }, MIN_STEP_DURATION_MS * 3)
+
+  // Drive the run to completion through the pacer.
+  act(() => {
+    capturedOnEvent!({ type: 'round_complete', round: 1, accepted_ids: [] })
+    capturedOnEvent!({ type: 'final_result', status: 'no_consensus', suggestions: [] })
+  })
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS * 2)
+  })
+
+  expect(screen.getByText('No compromise could be reached.')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
+
+  // Reset the simulation before the delayed event fires.
+  fireEvent.click(screen.getByRole('button', { name: /retry/i }))
+
+  expect(screen.getByRole('button', { name: /start/i })).toBeInTheDocument()
+  expect(screen.queryByText('Veggie Spot')).not.toBeInTheDocument()
+  expect(screen.queryByText(/No compromise could be reached/)).not.toBeInTheDocument()
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS * 4)
+  })
+
+  // The delayed queued event must be ignored by the disposed run.
+  expect(screen.getByRole('button', { name: /start/i })).toBeInTheDocument()
+  expect(screen.queryByText('Veggie Spot')).not.toBeInTheDocument()
+  expect(screen.queryByText(/No compromise could be reached/)).not.toBeInTheDocument()
+
+  vi.useRealTimers()
+})
+
+test('shows every user-facing backend agent phase in order with timer advancement', async () => {
+  vi.mocked(fetchSolveRestaurants).mockResolvedValue({ run_id: 'run-1', status: 'started' })
+  let capturedOnEvent: ((event: SolveRestaurantsEvent) => void) | null = null
+  vi.mocked(subscribeSolveRestaurantsEvents).mockImplementation((_runId, onEvent) => {
+    capturedOnEvent = onEvent
+    return () => {}
+  })
+  const user = userEvent.setup()
+  const suggestion = { id: 'r1', name: 'Veggie Spot', address: null, coordinates: [-73.98, 40.75] as [number, number] }
+
+  render(<SolveRestaurantsPage people={[elena, marcus]} overlap={overlap} onBack={vi.fn()} />)
+  await user.click(screen.getByRole('button', { name: /start/i }))
+  await waitFor(() => expect(subscribeSolveRestaurantsEvents).toHaveBeenCalled())
+  expect(capturedOnEvent).not.toBeNull()
+
+  vi.useFakeTimers()
+
+  // Planner phase
+  act(() => {
+    capturedOnEvent!({ type: 'planner_started', round: 1 })
+    capturedOnEvent!({ type: 'planner_suggestions', round: 1, suggestions: [suggestion] })
+  })
+
+  expect(screen.getByText(/Brainstorming restaurant ideas/)).toBeInTheDocument()
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
+  expect(screen.getByText('Veggie Spot')).toBeInTheDocument()
+
+  // Judge questioning phase
+  act(() => {
+    capturedOnEvent!({ type: 'judge_questioning', person: 'Elena', suggestion_id: 'r1' })
+  })
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
+  expect(screen.getByText(/Deciding what to research about Veggie Spot/)).toBeInTheDocument()
+
+  // Researcher phase
+  act(() => {
+    capturedOnEvent!({ type: 'researcher_started', suggestion_id: 'r1' })
+  })
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
+  expect(screen.getByText(/Researching Veggie Spot/)).toBeInTheDocument()
+
+  // Judge evaluation phase
+  act(() => {
+    capturedOnEvent!({ type: 'researcher_done', suggestion_id: 'r1' })
+    capturedOnEvent!({ type: 'judge_evaluating', person: 'Marcus', suggestion_id: 'r1' })
+  })
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
+  expect(screen.queryByText(/Researching Veggie Spot/)).not.toBeInTheDocument()
+  expect(screen.getByText(/Evaluating Veggie Spot/)).toBeInTheDocument()
+
+  // Verdict feedback
+  act(() => {
+    capturedOnEvent!({
+      type: 'judge_verdict',
+      person: 'Marcus',
+      suggestion_id: 'r1',
+      verdict: 'rejected',
+      short_reason: 'Too spicy',
+      feedback: null,
+    })
+  })
+
+  expect(screen.getByText('Too spicy')).toBeInTheDocument()
+
+  // Round complete -> pending trash
+  act(() => {
+    capturedOnEvent!({ type: 'round_complete', round: 1, accepted_ids: [] })
+  })
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS)
+  })
+
+  expect(screen.getByText('Veggie Spot').closest('[data-phase]')).toHaveAttribute('data-phase', 'pending-trash')
+
+  // Final result banner
+  act(() => {
+    capturedOnEvent!({ type: 'final_result', status: 'no_consensus', suggestions: [] })
+  })
+
+  act(() => {
+    vi.advanceTimersByTime(MIN_STEP_DURATION_MS * 2)
+  })
+
+  expect(screen.getByText('No compromise could be reached.')).toBeInTheDocument()
+
+  vi.useRealTimers()
 })

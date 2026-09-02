@@ -8,6 +8,10 @@ import {
   type Person,
   type SolveRestaurantsResponse,
 } from '../lib/people-api'
+import {
+  MIN_STEP_DURATION_MS,
+  createSolveRestaurantsEventPacer,
+} from './solve-restaurants-event-pacer'
 import { conversationReducer, initialConversationState } from './solve-restaurants-state'
 
 type SolveRestaurantsPageProps = {
@@ -72,7 +76,12 @@ export default function SolveRestaurantsPage({
 
   useEffect(() => {
     if (!runId) return
-    return subscribeSolveRestaurantsEvents(runId, dispatch)
+    const pacer = createSolveRestaurantsEventPacer(dispatch)
+    const unsubscribe = subscribeSolveRestaurantsEvents(runId, pacer.push)
+    return () => {
+      unsubscribe()
+      pacer.dispose()
+    }
   }, [runId])
 
   useEffect(() => {
@@ -81,7 +90,7 @@ export default function SolveRestaurantsPage({
 
     const timer = setTimeout(() => {
       dispatch({ type: 'flush-pending-trash' })
-    }, 1500)
+    }, MIN_STEP_DURATION_MS)
 
     return () => clearTimeout(timer)
   }, [conversation.cards])

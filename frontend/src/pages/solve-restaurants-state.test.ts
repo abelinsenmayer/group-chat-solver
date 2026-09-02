@@ -105,6 +105,35 @@ test('final_result no_consensus trashes every card', () => {
   expect(next.cards.every((card) => card.phase === 'trashed')).toBe(true)
 })
 
+test('planner_suggestions retains pending-trash cards so flush-pending-trash can transition them', () => {
+  const pendingTrashCard = { ...suggestion, id: 'rejected', name: 'Old Place' }
+  const newSuggestion = { ...suggestion, id: 'new1', name: 'New Place' }
+  const state = stateWithCards([
+    { suggestion: accepted, verdicts: {}, phase: 'active' },
+    { suggestion: pendingTrashCard, verdicts: {}, phase: 'pending-trash' },
+  ])
+
+  // planner_suggestions arrives before flush-pending-trash
+  const afterSuggestions = conversationReducer(state, {
+    type: 'planner_suggestions',
+    round: 2,
+    suggestions: [newSuggestion],
+  })
+
+  // pending-trash card must be retained
+  expect(afterSuggestions.cards.map((card) => [card.suggestion.id, card.phase])).toEqual([
+    ['rejected', 'pending-trash'],
+    ['new1', 'active'],
+  ])
+
+  // flush-pending-trash now transitions them to trashed
+  const afterFlush = conversationReducer(afterSuggestions, { type: 'flush-pending-trash' })
+  expect(afterFlush.cards.map((card) => [card.suggestion.id, card.phase])).toEqual([
+    ['rejected', 'trashed'],
+    ['new1', 'active'],
+  ])
+})
+
 test('error records the message and clears active lines and researcher state', () => {
   const state: typeof initialConversationState = {
     ...initialConversationState,

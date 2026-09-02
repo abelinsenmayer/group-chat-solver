@@ -72,7 +72,7 @@ export function RestaurantSolverBoard({
       </div>
 
       <div className='flex justify-center'>
-        <Separator data-testid="solver-divider" className='w-3/4!' />
+        <Separator data-testid="solver-divider" className='w-3/4! bg-primary/30' />
       </div>
 
     <div

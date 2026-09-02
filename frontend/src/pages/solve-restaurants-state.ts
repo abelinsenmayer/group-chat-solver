@@ -46,7 +46,7 @@ export function conversationReducer(state: ConversationState, event: Conversatio
     case 'planner_started':
       return { ...state, plannerThinking: true }
     case 'planner_suggestions': {
-      const keptCards = state.cards.filter((card) => card.phase === 'trashed')
+      const keptCards = state.cards.filter((card) => card.phase === 'trashed' || card.phase === 'pending-trash')
       return {
         ...state,
         plannerThinking: false,
